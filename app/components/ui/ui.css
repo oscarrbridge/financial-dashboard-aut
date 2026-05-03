@@ -38,3 +38,20 @@
     color: var(--button-text-color);
     background: var(--text-color);
 }
+
+.custom-wrapper {
+    display: flex;
+    flex-direction: column;
+
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-3);
+
+    background: var(--widget-color);
+
+    border-radius: var(--radius-lg);
+
+    padding: var(--space-8);
+
+    width: 100%;
+}

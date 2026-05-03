@@ -1,11 +1,11 @@
-import { Button, Input} from '@/app/components/ui/ui'
+import { Button, Input, Wrapper} from '@/app/components/ui/ui'
 
 export default function DashboardPage() {
   return (
-    <div>
+    <Wrapper>
       <div>Dashboard</div>
       <Button buttonText="hello" />
       <Input placeholder="test placeholder" />
-    </div>
+    </Wrapper>
   );
 }
