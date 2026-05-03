@@ -1,3 +1,4 @@
+import React from "react";
 import "./ui.css"
 
 type ButtonProps = {
@@ -21,5 +22,18 @@ type InputProps = {
 export function Input({ placeholder }: InputProps) {
   return (
     <input className="custom-input" type="text" placeholder={placeholder} />
+  );
+}
+
+type WrapperProps = {
+  children: React.ReactNode;
+  className?: string;
+};
+
+export function Wrapper({ children, className = ""}: WrapperProps) {
+  return (
+    <div className={`custom-wrapper ${className}`}>
+      {children}
+    </div>
   );
 }
