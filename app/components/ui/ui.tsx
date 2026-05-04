@@ -43,15 +43,17 @@ export function Wrapper({ children, className = ""}: WrapperProps) {
 
 type MultiSelectProps = {
   options: string[];
+  onChange?: (selected: string) => void;
 }
 
-export function MultiSelect({ options }: MultiSelectProps) {
+export function MultiSelect({ options, onChange }: MultiSelectProps) {
 
   const [selected, setSelected] = useState<string>(options[0]);
 
 
   const select = (option: string) => {
     setSelected(option);
+    onChange?.(option);
   };
 
   return (
