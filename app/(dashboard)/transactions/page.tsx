@@ -1,3 +1,11 @@
+import CsvUpload from "@/app/components/csvUpload";
+
 export default function TransactionsPage() {
-  return <div>Transactions</div>;
+  return (
+    <main>
+      <h1>Transactions</h1>
+
+      <CsvUpload />
+    </main>
+  );
 }
