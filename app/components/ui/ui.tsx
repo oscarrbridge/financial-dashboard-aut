@@ -6,11 +6,13 @@ import "./ui.css"
 
 type ButtonProps = {
   buttonText: string;
+  onClick?: () => void;
+  type?: "button" | "submit" | "reset";
 };
 
-export function Button({ buttonText }: ButtonProps) {
+export function Button({ buttonText, onClick, type }: ButtonProps) {
   return (
-    <button className="custom-button">
+    <button className="custom-button" onClick={onClick} type={type}>
       {buttonText}
     </button>
   );
@@ -19,12 +21,27 @@ export function Button({ buttonText }: ButtonProps) {
 
 
 type InputProps = {
-  placeholder: string;
+  placeholder?: string;
+  value?: string;
+  onChange?: (selected: string) => void;
+  type?: "text" | "password";
+  autoComplete?: string;
+  name?: string;
+  id?: string;
 };
 
-export function Input({ placeholder }: InputProps) {
+export function Input({ placeholder, value, onChange, type, autoComplete, name, id}: InputProps) {
   return (
-    <input className="custom-input" type="text" placeholder={placeholder} />
+    <input 
+    className="custom-input" 
+    type={type}
+    placeholder={placeholder} 
+    value={value}
+    onChange={(e) => onChange?.(e.target.value)}
+    autoComplete={autoComplete}
+    name={name}
+    id={id}
+    />
   );
 }
 
@@ -43,15 +60,17 @@ export function Wrapper({ children, className = ""}: WrapperProps) {
 
 type MultiSelectProps = {
   options: string[];
+  onChange?: (selected: string) => void;
 }
 
-export function MultiSelect({ options }: MultiSelectProps) {
+export function MultiSelect({ options, onChange }: MultiSelectProps) {
 
   const [selected, setSelected] = useState<string>(options[0]);
 
 
   const select = (option: string) => {
     setSelected(option);
+    onChange?.(option);
   };
 
   return (
