@@ -64,7 +64,7 @@ export default function LoginPage() {
 
         {activeOption === "Login" && (
           <>
-            <form onSubmit={loginUser} className="flex flex-col gap-(--space-3)">
+            <form className="flex flex-col gap-(--space-3)">
               <div className="flex flex-col text-center">
                 Login
                 {loginMessage != "" && (
@@ -89,14 +89,14 @@ export default function LoginPage() {
                 name="password"
                 id="password"
               />
-              <Button type="submit" buttonText="Login" />
+              <Button onClick={loginUser} type="button" buttonText="Login" />
             </form>
           </>
         )}
 
         {activeOption === "Sign Up" && (
           <>
-            <form action={signUpUser} className="flex flex-col gap-(--space-3)">
+            <form className="flex flex-col gap-(--space-3)">
               <div className="flex flex-col text-center">
                 Sign Up
                 {loginMessage != "" && (
@@ -138,7 +138,7 @@ export default function LoginPage() {
                 name="new-password"
                 id="new-password"
               />
-              <Button type="submit" buttonText="Sign Up" />
+              <Button onClick={signUpUser} type="button" buttonText="Sign Up"/>
             </form>
           </>
         )}
