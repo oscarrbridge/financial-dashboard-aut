@@ -14,7 +14,7 @@ export default function LoginPage() {
         {activeOption === "Login" && (
           <>
           <div>Login</div>
-          <Input placeholder="Full Name" />
+          <Input placeholder="Email" />
           <Input placeholder="Password" />
           <Button buttonText="Login" />
           </>
@@ -25,6 +25,7 @@ export default function LoginPage() {
           <>
           <div>Sign Up</div>
           <Input placeholder="Full Name" />
+          <Input placeholder="Email" />
           <Input placeholder="Password" />
           <Input placeholder="Confirm Password" />
           <Button buttonText="Login" />
