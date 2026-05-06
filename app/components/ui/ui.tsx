@@ -21,7 +21,7 @@ export function Button({ buttonText, onClick, type }: ButtonProps) {
 
 
 type InputProps = {
-  placeholder: string;
+  placeholder?: string;
   value?: string;
   onChange?: (selected: string) => void;
   type?: "text" | "password";
