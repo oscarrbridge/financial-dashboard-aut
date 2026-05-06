@@ -89,15 +89,4 @@ export function MultiSelect({ options, onChange }: MultiSelectProps) {
   );
 }
 
-type ToastProps = {
-  value: string;
-  timeout: number;
-  color: string;
-};
-export function Toast({ value, timeout, color }: ToastProps) {
-  return (
-    <div style={{ backgroundColor: color }} className="toast">
-      {value} {timeout}
-    </div>
-  );
-}
+

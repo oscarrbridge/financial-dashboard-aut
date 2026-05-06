@@ -6,17 +6,16 @@ import { useAuth } from '@/context/authContext'
 export default function DashboardPage() {
   const user = useAuth();
 
-  function test() {
-    console.log(user);
+  function showToast() {
+    console.log();
   }
 
   return (
     <Wrapper>
       <div>Dashboard</div>
-      <Button onClick={test} buttonText="hello" />
+      <Button onClick={showToast} buttonText="hello" />
       <Input placeholder="test placeholder" />
       <MultiSelect options={["Option1", "Option2", "Option3"]}/>
-      {/* <Toast value='Test Toast' timeout={3} color='red-600'/> */}
     </Wrapper>
   );
 }

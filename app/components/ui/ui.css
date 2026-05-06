@@ -79,7 +79,3 @@
     background: var(--secondary-color);
     color: var(--text-color);
 }
-
-.toast {
-    padding: var(--space-8);
-}
