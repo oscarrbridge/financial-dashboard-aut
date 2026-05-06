@@ -7,8 +7,6 @@ export default function LoginPage() {
 
   const [activeOption, setActiveOption] = useState("Login");
 
-
-
   return (
       <Wrapper>
         <MultiSelect options={["Login", "Sign Up"]} onChange={(option) => setActiveOption(option)}/>
