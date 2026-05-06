@@ -24,16 +24,23 @@ type InputProps = {
   placeholder: string;
   value?: string;
   onChange?: (selected: string) => void;
+  type?: "text" | "password";
+  autoComplete?: string;
+  name?: string;
+  id?: string;
 };
 
-export function Input({ placeholder, value, onChange }: InputProps) {
+export function Input({ placeholder, value, onChange, type, autoComplete, name, id}: InputProps) {
   return (
     <input 
     className="custom-input" 
-    type="text" 
+    type={type}
     placeholder={placeholder} 
     value={value}
     onChange={(e) => onChange?.(e.target.value)}
+    autoComplete={autoComplete}
+    name={name}
+    id={id}
     />
   );
 }

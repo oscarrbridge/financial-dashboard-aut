@@ -63,7 +63,7 @@ export default function LoginPage() {
 
 			{activeOption === "Login" && (
 				<>
-					<form action={loginUser} className="flex flex-col gap-(--space-3)">
+					<form onSubmit={loginUser} className="flex flex-col gap-(--space-3)">
 						<div className="flex flex-col text-center">
 							Login
 							{loginMessage != "" && (
@@ -71,11 +71,22 @@ export default function LoginPage() {
 							)}
 						</div>
 
-						<Input value={email} onChange={setEmail} placeholder="Email" />
+						<Input
+							value={email}
+							onChange={setEmail}
+							placeholder="Email"
+							autoComplete="email"
+							name="email"
+							id="email"
+						/>
 						<Input
 							value={password}
 							onChange={setPassword}
 							placeholder="Password"
+							type="password"
+							autoComplete="password"
+							name="password"
+							id="password"
 						/>
 						<Button type="submit" buttonText="Login" />
 					</form>
@@ -84,7 +95,7 @@ export default function LoginPage() {
 
 			{activeOption === "Sign Up" && (
 				<>
-					<form action={loginUser} className="flex flex-col gap-(--space-3)">
+					<form action={signUpUser} className="flex flex-col gap-(--space-3)">
 						<div className="flex flex-col text-center">
 							Sign Up
 							{loginMessage != "" && (
@@ -96,17 +107,35 @@ export default function LoginPage() {
 							value={fullName}
 							onChange={setFullName}
 							placeholder="Full Name"
+							autoComplete="name"
+							name="name"
+							id="name"
 						/>
-						<Input value={email} onChange={setEmail} placeholder="Email" />
+						<Input
+							value={email}
+							onChange={setEmail}
+							placeholder="Email"
+							autoComplete="email"
+							name="email"
+							id="email"
+						/>
 						<Input
 							value={password}
 							onChange={setPassword}
 							placeholder="Password"
+							type="password"
+							autoComplete="password"
+							name="password"
+							id="password"
 						/>
 						<Input
 							value={confirmPassword}
 							onChange={setConfirmPassword}
 							placeholder="Confirm Password"
+							type="password"
+							autoComplete="new-password"
+							name="new-password"
+							id="new-password"
 						/>
 						<Button type="submit" buttonText="Sign Up" />
 					</form>
