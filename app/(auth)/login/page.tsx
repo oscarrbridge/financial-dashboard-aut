@@ -52,95 +52,97 @@ export default function LoginPage() {
 	};
 
 	return (
-		<Wrapper>
-			<MultiSelect
-				options={["Login", "Sign Up"]}
-				onChange={(option) => {
-					setActiveOption(option);
-					setLoginMessage("");
-				}}
-			/>
+    <div className="flex items-center h-screen">
+      <Wrapper>
+        <MultiSelect
+          options={["Login", "Sign Up"]}
+          onChange={(option) => {
+            setActiveOption(option);
+            setLoginMessage("");
+          }}
+        />
 
-			{activeOption === "Login" && (
-				<>
-					<form onSubmit={loginUser} className="flex flex-col gap-(--space-3)">
-						<div className="flex flex-col text-center">
-							Login
-							{loginMessage != "" && (
-								<p className="text-error-text">{loginMessage}</p>
-							)}
-						</div>
+        {activeOption === "Login" && (
+          <>
+            <form onSubmit={loginUser} className="flex flex-col gap-(--space-3)">
+              <div className="flex flex-col text-center">
+                Login
+                {loginMessage != "" && (
+                  <p className="text-error-text">{loginMessage}</p>
+                )}
+              </div>
 
-						<Input
-							value={email}
-							onChange={setEmail}
-							placeholder="Email"
-							autoComplete="email"
-							name="email"
-							id="email"
-						/>
-						<Input
-							value={password}
-							onChange={setPassword}
-							placeholder="Password"
-							type="password"
-							autoComplete="password"
-							name="password"
-							id="password"
-						/>
-						<Button type="submit" buttonText="Login" />
-					</form>
-				</>
-			)}
+              <Input
+                value={email}
+                onChange={setEmail}
+                placeholder="Email"
+                autoComplete="email"
+                name="email"
+                id="email"
+              />
+              <Input
+                value={password}
+                onChange={setPassword}
+                placeholder="Password"
+                type="password"
+                autoComplete="password"
+                name="password"
+                id="password"
+              />
+              <Button type="submit" buttonText="Login" />
+            </form>
+          </>
+        )}
 
-			{activeOption === "Sign Up" && (
-				<>
-					<form action={signUpUser} className="flex flex-col gap-(--space-3)">
-						<div className="flex flex-col text-center">
-							Sign Up
-							{loginMessage != "" && (
-								<p className="text-error-text">{loginMessage}</p>
-							)}
-						</div>
+        {activeOption === "Sign Up" && (
+          <>
+            <form action={signUpUser} className="flex flex-col gap-(--space-3)">
+              <div className="flex flex-col text-center">
+                Sign Up
+                {loginMessage != "" && (
+                  <p className="text-error-text">{loginMessage}</p>
+                )}
+              </div>
 
-						<Input
-							value={fullName}
-							onChange={setFullName}
-							placeholder="Full Name"
-							autoComplete="name"
-							name="name"
-							id="name"
-						/>
-						<Input
-							value={email}
-							onChange={setEmail}
-							placeholder="Email"
-							autoComplete="email"
-							name="email"
-							id="email"
-						/>
-						<Input
-							value={password}
-							onChange={setPassword}
-							placeholder="Password"
-							type="password"
-							autoComplete="password"
-							name="password"
-							id="password"
-						/>
-						<Input
-							value={confirmPassword}
-							onChange={setConfirmPassword}
-							placeholder="Confirm Password"
-							type="password"
-							autoComplete="new-password"
-							name="new-password"
-							id="new-password"
-						/>
-						<Button type="submit" buttonText="Sign Up" />
-					</form>
-				</>
-			)}
-		</Wrapper>
+              <Input
+                value={fullName}
+                onChange={setFullName}
+                placeholder="Full Name"
+                autoComplete="name"
+                name="name"
+                id="name"
+              />
+              <Input
+                value={email}
+                onChange={setEmail}
+                placeholder="Email"
+                autoComplete="email"
+                name="email"
+                id="email"
+              />
+              <Input
+                value={password}
+                onChange={setPassword}
+                placeholder="Password"
+                type="password"
+                autoComplete="password"
+                name="password"
+                id="password"
+              />
+              <Input
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                placeholder="Confirm Password"
+                type="password"
+                autoComplete="new-password"
+                name="new-password"
+                id="new-password"
+              />
+              <Button type="submit" buttonText="Sign Up" />
+            </form>
+          </>
+        )}
+      </Wrapper>
+    </div>
 	);
 }
