@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { Wrapper, Button, Input, MultiSelect } from '@/app/components/ui/ui'
-import { signUp } from '@/lib/firebase/auth'
+import { signUp, signIn } from '@/lib/firebase/auth'
 import { useRouter } from "next/navigation";
+import { sign } from "crypto";
 
 export default function LoginPage() {
 
@@ -19,9 +20,6 @@ export default function LoginPage() {
   const [loginMessage, setLoginMessage] = useState("");
 
   const signUpUser = async () => {
-
-    console.log(fullName, email, password, confirmPassword)
-
     if(fullName == "" || email == "" || password == "") {
       setLoginMessage("All fields must be filled in");
       return;
@@ -36,26 +34,39 @@ export default function LoginPage() {
       return;
     }
     try {
+      setLoginMessage("Signing Up...")
       await signUp(email, password);
-      router.push("/dashboard");
+      router.push("/");
     } catch (error) {
-        setLoginMessage("other error")
+        setLoginMessage("other error");
+    }
+  }
+
+  const loginUser = async () => {
+    try {
+      setLoginMessage("Logging in...")
+      await signIn(email, password);
+      router.push("/")
+    } catch (error) {
+      setLoginMessage("other error");
     }
   }
 
   return (
       <Wrapper>
         <MultiSelect options={["Login", "Sign Up"]} onChange={(option) => setActiveOption(option)}/>
-        {loginMessage != "" && (
-          <p className="">{loginMessage}</p> // FIX: Color should be error color
-        )}
         
         {activeOption === "Login" && (
           <>
           <div>Login</div>
+
+          {loginMessage != "" && (
+            <p className="">{loginMessage}</p> // FIX: Color should be error color
+          )}
+
           <Input value={email} onChange={setEmail} placeholder="Email" />
           <Input value={password} onChange={setPassword} placeholder="Password" />
-          <Button onClick={signUpUser} buttonText="Login" />
+          <Button onClick={loginUser} buttonText="Login" />
           </>
         )}
 
@@ -63,6 +74,11 @@ export default function LoginPage() {
         {activeOption === "Sign Up" && (
           <>
           <div>Sign Up</div>
+          
+          {loginMessage != "" && (
+            <p className="">{loginMessage}</p> // FIX: Color should be error color
+          )}
+          
           <Input value={fullName} onChange={setFullName} placeholder="Full Name" />
           <Input value={email} onChange={setEmail} placeholder="Email" />
           <Input value={password} onChange={setPassword} placeholder="Password" />
