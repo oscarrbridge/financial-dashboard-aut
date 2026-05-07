@@ -37,19 +37,57 @@ export default function BudgetPage() {
     <div>
       <h3 className="font-semibold">Food & Groceries</h3>
 
-      <p className="text-inactive-text text-sm">
-        Budget Limit: $300
-      </p>
+      <div className="mt-2">
+  <label className="text-sm text-inactive-text">
+    Budget Limit
+  </label>
+
+  <input
+    type="number"
+    placeholder="Enter budget"
+    className="w-full mt-2 bg-secondary text-text p-3 rounded-md outline-none"
+  />
+</div>
     </div>
 
-    <p className="text-green-400 font-medium">
-      Within Budget
-    </p>
+  
   </div>
 
   <div className="w-full bg-secondary rounded-full h-3 mt-4">
     <div className="bg-green-500 h-3 rounded-full w-2/3"></div>
   </div>
+
+  <p className="text-green-400 font-medium mt-3">
+  Within Budget
+</p>
+</div>
+
+<div className="bg-widget p-6 rounded-lg mt-4">
+  <div className="flex items-center justify-between">
+    <div>
+      <h3 className="font-semibold">Transport</h3>
+
+      <div className="mt-2">
+        <label className="text-sm text-inactive-text">
+          Budget Limit
+        </label>
+
+        <input
+          type="number"
+          placeholder="Enter budget"
+          className="w-full mt-2 bg-secondary text-text p-3 rounded-md outline-none"
+        />
+      </div>
+    </div>
+  </div>
+
+  <div className="w-full bg-secondary rounded-full h-3 mt-4">
+    <div className="bg-red-500 h-3 rounded-full w-5/6"></div>
+  </div>
+
+  <p className="text-red-400 font-medium mt-3">
+    Over Budget
+  </p>
 </div>
 
   </div>
