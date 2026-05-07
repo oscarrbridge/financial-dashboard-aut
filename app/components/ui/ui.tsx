@@ -11,11 +11,7 @@ type ButtonProps = {
 
 export function Button({ buttonText, onClick }: ButtonProps) {
   return (
-<<<<<<< HEAD
-    <button className="custom-button" type="button" onClick={onClick}>
-=======
     <button className="custom-button" onClick={onClick}>
->>>>>>> main
       {buttonText}
     </button>
   );
