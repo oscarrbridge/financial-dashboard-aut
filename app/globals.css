@@ -7,12 +7,12 @@
   --text-color: #ffffff;
   --inactive-text-color: #999898;
 
-  --error-text-color: #d81b15;
+  --error-text-color: #d3504c;
 
   --button-text-color: #000000;
   --hover-color: linear-gradient(160deg, #ffffff 0%, #f5f5f5 40%, #ececec 100%);
 
-  --component-width: 250px;
+  --component-width: 300px;
 
   --radius-xs: 0.25rem;
   --radius-sm: 0.5rem;
