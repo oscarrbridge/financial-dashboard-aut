@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Input, Wrapper, MultiSelect, Toast } from '@/app/components/ui/ui'
+import { Button, Input, Wrapper, MultiSelect } from '@/app/components/ui/ui'
 import { useAuth } from '@/context/authContext'
 
 export default function DashboardPage() {
