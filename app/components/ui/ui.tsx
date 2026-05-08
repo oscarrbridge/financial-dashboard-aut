@@ -5,6 +5,7 @@ import { useState } from "react";
 import "./ui.css";
 import { type LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { Url } from "next/dist/shared/lib/router/router";
 
 type ButtonProps = {
 	buttonText?: string;
@@ -94,13 +95,13 @@ export function MultiSelect({ options, onChange }: MultiSelectProps) {
 type NavIconProps = {
 	icon: LucideIcon;
 	text: string;
-	link?: string;
+	link?: Url;
 };
 
-export function NavIcon({ icon: Icon, text, link }: NavIconProps) {
+export function NavIcon({ icon: Icon, text, link = "/" }: NavIconProps) {
 	return (
 			<Link
-				href="/transactions"
+				href={link}
 				className="custom-nav-icon flex flex-col items-center"
 			>
 				<Icon />
