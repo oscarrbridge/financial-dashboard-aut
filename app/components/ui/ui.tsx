@@ -2,19 +2,20 @@
 
 import React from "react";
 import { useState } from "react";
-import "./ui.css";
-import { time } from "console";
+import "./ui.css"
+import { Camera, Link } from 'lucide-react';
 
 type ButtonProps = {
-  buttonText: string;
+  buttonText?: string;
   onClick?: () => void;
   type?: "button" | "submit" | "reset";
+  children?: React.ReactNode;
 };
 
-export function Button({ buttonText, onClick, type }: ButtonProps) {
+export function Button({ buttonText, onClick, type, children }: ButtonProps) {
   return (
     <button className="custom-button" onClick={onClick} type={type}>
-      {buttonText}
+      {children ?? buttonText}
     </button>
   );
 }
@@ -89,4 +90,19 @@ export function MultiSelect({ options, onChange }: MultiSelectProps) {
   );
 }
 
+type NavIconProps = {
+  icon: string
+  text: string
+  link?: string
+}
 
+export function NavIcon( { icon, text, link }: NavIconProps) {
+  return (
+    <div className="custom-nav-icon">
+      <Link href={link}>
+        <Camera />
+        {text}
+      </Link>
+    </div>
+  )
+}
