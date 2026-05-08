@@ -31,10 +31,10 @@ export default function RootLayout({
     >
       <body className="min-h-screen flex flex-row bg-background items-center text-text">
         <AuthProvider>
-          <div className="basis-[5%] shrink-0 h-screen flex justify-center">
+          <div className="basis-[10%] shrink-0 h-screen flex justify-center">
             <NavBar />
           </div>
-          <main className="basis-[95%] grow min-w-0 flex justify-center">{children}</main>
+          <main className="basis-[90%] grow min-w-0 flex justify-center">{children}</main>
         </AuthProvider>
       </body>
     </html>

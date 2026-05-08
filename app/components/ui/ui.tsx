@@ -5,7 +5,7 @@ import { useState } from "react";
 import "./ui.css";
 import { type LucideIcon } from "lucide-react";
 import Link from "next/link";
-import { Url } from "next/dist/shared/lib/router/router";
+import { Dot } from 'lucide-react'
 
 type ButtonProps = {
 	buttonText?: string;
@@ -95,17 +95,19 @@ export function MultiSelect({ options, onChange }: MultiSelectProps) {
 type NavIconProps = {
 	icon: LucideIcon;
 	text: string;
-	link?: Url;
+	link?: string;
+  active?: boolean;
 };
 
-export function NavIcon({ icon: Icon, text, link = "/" }: NavIconProps) {
+export function NavIcon({ icon: Icon, text, link = "/", active}: NavIconProps) {
 	return (
 			<Link
 				href={link}
-				className="custom-nav-icon flex flex-col items-center"
+				className={`custom-nav-icon relative flex flex-col items-center ${active}`}
 			>
 				<Icon />
 				{text}
+        {active && <Dot className="active-dot absolute bottom-0"/>}
 			</Link>
 	);
 }
