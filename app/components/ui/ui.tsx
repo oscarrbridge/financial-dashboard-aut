@@ -5,15 +5,16 @@ import { useState } from "react";
 import "./ui.css"
 
 type ButtonProps = {
-  buttonText: string;
+  buttonText?: string;
   onClick?: () => void;
   type?: "button" | "submit" | "reset";
+  children?: React.ReactNode;
 };
 
-export function Button({ buttonText, onClick, type }: ButtonProps) {
+export function Button({ buttonText, onClick, type, children }: ButtonProps) {
   return (
     <button className="custom-button" onClick={onClick} type={type}>
-      {buttonText}
+      {children ?? buttonText}
     </button>
   );
 }

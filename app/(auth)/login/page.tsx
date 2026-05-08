@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { Wrapper, Button, Input, MultiSelect } from "@/app/components/ui/ui";
-import { signUp, signIn } from "@/lib/firebase/auth";
+import { signUp, signIn, signInWithGoogle } from "@/lib/firebase/auth";
 import { useRouter } from "next/navigation";
 import { FirebaseError } from "firebase/app";
+import ChromeIcon from "@/app/components/icons/chrome";
 
 export default function LoginPage() {
 	const router = useRouter();
@@ -79,6 +80,24 @@ export default function LoginPage() {
 		}
 	};
 
+	const handleGoogleSignIn = async () => {
+		try {
+			setLoginMessage("Signing in with Google");
+			await signInWithGoogle();
+			router.push("/");
+		} catch (error) {
+			if (error instanceof FirebaseError) {
+				switch (error.code) {
+					case "auth/popup-closed-by-user":
+						setLoginMessage("Sign-in cancelled");
+						break;
+					case "auth/popup-blocked":
+						setLoginMessage("Popup was blocked");
+				}
+			}
+		}
+	};
+
 	return (
 		<div className="flex items-center h-screen">
 			<Wrapper>
@@ -117,6 +136,12 @@ export default function LoginPage() {
 								name="password"
 								id="password"
 							/>
+							<Button onClick={handleGoogleSignIn} type="button">
+								<div className="flex gap-2">
+									Login with Google:
+									<ChromeIcon size={24} />
+								</div>
+							</Button>
 							<Button onClick={loginUser} type="button" buttonText="Login" />
 						</form>
 					</>
@@ -166,6 +191,12 @@ export default function LoginPage() {
 								name="new-password"
 								id="new-password"
 							/>
+							<Button onClick={handleGoogleSignIn} type="button">
+								<div className="flex gap-2">
+									Sign up with Google:
+									<ChromeIcon size={24} />
+								</div>
+							</Button>
 							<Button onClick={signUpUser} type="button" buttonText="Sign Up" />
 						</form>
 					</>
