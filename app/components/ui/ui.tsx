@@ -3,6 +3,7 @@
 import React from "react";
 import { useState } from "react";
 import "./ui.css"
+import { Camera, Link } from 'lucide-react';
 
 type ButtonProps = {
   buttonText?: string;
@@ -86,4 +87,21 @@ export function MultiSelect({ options, onChange }: MultiSelectProps) {
       ))}
     </div>
   );
+}
+
+type NavIconProps = {
+  icon: string
+  text: string
+  link?: string
+}
+
+export function NavIcon( { icon, text, link }: NavIconProps) {
+  return (
+    <div className="custom-nav-icon">
+      <Link href={link}>
+        <Camera />
+        {text}
+      </Link>
+    </div>
+  )
 }
