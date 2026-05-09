@@ -6,6 +6,7 @@ import {
 	signOut as signOutFirebase,
 } from "firebase/auth";
 import { auth } from "./config";
+import { useRouter } from "next/router";
 
 export async function signUp(email: string, password: string) {
 	const { user } = await createUserWithEmailAndPassword(auth, email, password);
