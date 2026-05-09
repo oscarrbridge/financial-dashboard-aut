@@ -8,7 +8,7 @@ export default function DashboardPage() {
   const user = useAuth();
 
   function showToast() {
-    console.log();
+    console.log(user);
   }
 
   return (
