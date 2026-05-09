@@ -5,18 +5,19 @@ import { useState } from "react";
 import "./ui.css";
 import { type LucideIcon } from "lucide-react";
 import Link from "next/link";
-import { Dot } from 'lucide-react'
+import { Dot } from "lucide-react";
 
 type ButtonProps = {
 	buttonText?: string;
 	onClick?: () => void;
 	type?: "button" | "submit" | "reset";
 	children?: React.ReactNode;
+	width?: number
 };
 
-export function Button({ buttonText, onClick, type, children }: ButtonProps) {
+export function Button({ buttonText, onClick, type, children, width }: ButtonProps) {
 	return (
-		<button className="custom-button" onClick={onClick} type={type}>
+		<button className='custom-button' style={{minWidth: width}} onClick={onClick} type={type}>
 			{children ?? buttonText}
 		</button>
 	);
@@ -96,18 +97,26 @@ type NavIconProps = {
 	icon: LucideIcon;
 	text: string;
 	link?: string;
-  active?: boolean;
+	active?: boolean;
+	onClick?: () => void;
 };
 
-export function NavIcon({ icon: Icon, text, link = "/", active}: NavIconProps) {
+export function NavIcon({
+	icon: Icon,
+	text,
+	link = "/",
+	active,
+	onClick,
+}: NavIconProps) {
 	return (
-			<Link
-				href={link}
-				className={`custom-nav-icon relative flex flex-col items-center ${active}`}
-			>
-				<Icon />
-				{text}
-        {active && <Dot className="active-dot absolute bottom-0"/>}
-			</Link>
+		<Link
+			href={link}
+			className={`custom-nav-icon relative flex flex-col items-center ${active}`}
+			onClick={onClick}
+		>
+			<Icon />
+			{text}
+			{active && <Dot className="active-dot absolute bottom-0" />}
+		</Link>
 	);
 }

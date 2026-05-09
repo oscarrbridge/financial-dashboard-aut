@@ -3,6 +3,7 @@ import {
 	signInWithEmailAndPassword,
 	GoogleAuthProvider,
 	signInWithPopup,
+	signOut as signOutFirebase,
 } from "firebase/auth";
 import { auth } from "./config";
 
@@ -20,4 +21,8 @@ export const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     const result = await signInWithPopup(auth, provider);
     return result.user;
+}
+
+export async function signOut() {
+	await signOutFirebase(auth);
 }
