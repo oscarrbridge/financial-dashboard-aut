@@ -2,7 +2,7 @@ import { Button } from "./ui";
 import './accountWindow.css'
 import { useAuth } from "@/context/authContext";
 import { signOut } from "@/lib/firebase/auth";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 
 export default function AccountWindow() {
     const user = useAuth();

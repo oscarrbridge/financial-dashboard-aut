@@ -29,7 +29,7 @@ export default function NavBar() {
 			</div>
 			{accountView && (
 				<>
-					<div className="fixed inset-0 z--999 bg-black" onClick={() => setAccountView(false)} />
+					<div className="fixed inset-0 z--999" onClick={() => setAccountView(false)} />
 					<AccountWindow />
 				</>
 				)}
