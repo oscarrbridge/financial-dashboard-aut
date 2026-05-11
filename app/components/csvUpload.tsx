@@ -4,17 +4,56 @@ import { useRef, useState } from "react";
 import Papa from "papaparse";
 import { Button } from "@/app/components/ui/ui";
 
+type TransactionType = "Income" | "Expense" | "Debt";
+
 type ImportedTransaction = {
   date: string;
-  type: "Income" | "Expense" | "Debt";
+  type: TransactionType;
   source: string;
   description: string;
   amount: number;
 };
 
+const dateHeaders = ["Date", "Transaction Date", "Posted Date"];
+
+const descriptionHeaders = [
+  "Description",
+  "Memo",
+  "Payee",
+  "Details",
+  "Particulars",
+];
+
+const amountHeaders = ["Amount", "Value"];
+
+const debitHeaders = ["Debit", "Withdrawals"];
+
+const creditHeaders = ["Credit", "Deposits"];
+
+const incomeSourceOptions = [
+  "Wages",
+  "Scholarship",
+  "Student Allowance",
+  "Other Income",
+];
+
+const expenseSourceOptions = [
+  "Accommodation",
+  "Food & Groceries",
+  "Transport",
+  "Education",
+  "Entertainment",
+  "Utilities",
+  "Personal Care",
+  "Other Expense",
+];
+
+const debtSourceOptions = ["Loan Repayment", "Credit Card", "Other Debt"];
+
 export default function CsvUpload() {
   const [transactions, setTransactions] = useState<ImportedTransaction[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   function handleCsvUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -24,6 +63,8 @@ export default function CsvUpload() {
 
     if (!file.name.endsWith(".csv")) {
       setErrors(["Please upload a valid CSV file."]);
+      setTransactions([]);
+      setIsModalOpen(true);
       return;
     }
 
@@ -31,26 +72,85 @@ export default function CsvUpload() {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const imported: ImportedTransaction[] = [];
-        const errorMessages: string[] = [];
+        const csvHeaders = results.meta.fields ?? [];
+        const missingColumns = getMissingRequiredColumns(csvHeaders);
 
-        results.data.forEach((row, index) => {
+        if (missingColumns.length > 0) {
+          setTransactions([]);
+          setErrors([
+            `Could not find ${missingColumns.join(", ")} in CSV.`,
+          ]);
+          setIsModalOpen(true);
+          event.target.value = "";
+          return;
+        }
+
+        const imported: ImportedTransaction[] = [];
+        let invalidRowCount = 0;
+
+        results.data.forEach((row) => {
           const transaction = convertCsvRowToTransaction(row);
 
           if (!transaction) {
-            errorMessages.push(`Row ${index + 2}: Invalid or missing data.`);
+            invalidRowCount++;
           } else {
             imported.push(transaction);
           }
         });
 
+        const errorMessages: string[] = [];
+
+        if (invalidRowCount > 0) {
+          errorMessages.push(
+            `Could not import ${invalidRowCount} transaction${
+              invalidRowCount === 1 ? "" : "s"
+            } due to invalid data.`
+          );
+        }
+
         setTransactions(imported);
         setErrors(errorMessages);
+        setIsModalOpen(true);
+
+        // Allows the same CSV file to be selected again if needed
+        event.target.value = "";
       },
       error: () => {
         setErrors(["Could not read the CSV file."]);
+        setTransactions([]);
+        setIsModalOpen(true);
       },
     });
+  }
+
+  function updateTransactionSource(index: number, newSource: string) {
+    setTransactions((currentTransactions) =>
+      currentTransactions.map((transaction, transactionIndex) =>
+        transactionIndex === index
+          ? { ...transaction, source: newSource }
+          : transaction
+      )
+    );
+  }
+
+  function deleteTransactionRow(index: number) {
+    setTransactions((currentTransactions) =>
+      currentTransactions.filter(
+        (_, transactionIndex) => transactionIndex !== index
+      )
+    );
+  }
+
+  function getSourceOptionsByType(type: TransactionType) {
+    if (type === "Income") {
+      return incomeSourceOptions;
+    }
+
+    if (type === "Debt") {
+      return debtSourceOptions;
+    }
+
+    return expenseSourceOptions;
   }
 
   return (
@@ -70,66 +170,162 @@ export default function CsvUpload() {
         onClick={() => fileInputRef.current?.click()}
       />
 
-      {errors.length > 0 && (
-        <section>
-          <h3>CSV Errors</h3>
-          <ul>
-            {errors.map((error, index) => (
-              <li key={index}>{error}</li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {isModalOpen && (
+        <div style={overlayStyle}>
+          <div style={modalStyle}>
+            <div style={modalHeaderStyle}>
+              <h3>Imported CSV Transactions</h3>
 
-      {transactions.length > 0 && (
-        <section>
-          <h3>Imported Transactions</h3>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                style={closeButtonStyle}
+              >
+                ×
+              </button>
+            </div>
 
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Source</th>
-                <th>Description</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
+            {errors.length > 0 && (
+              <section>
+                <h4>CSV Errors</h4>
+                <ul>
+                  {errors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
-            <tbody>
-              {transactions.map((transaction, index) => (
-                <tr key={index}>
-                  <td>{transaction.date}</td>
-                  <td>{transaction.type}</td>
-                  <td>{transaction.source}</td>
-                  <td>{transaction.description}</td>
-                  <td>{transaction.amount}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+            {transactions.length > 0 ? (
+              <section>
+                <p>{transactions.length} transaction(s) imported.</p>
+
+                <div style={tableContainerStyle}>
+                  <table style={tableStyle}>
+                    <thead>
+                      <tr>
+                        <th style={tableHeaderCellStyle}>Date</th>
+                        <th style={tableHeaderCellStyle}>Type</th>
+                        <th style={tableHeaderCellStyle}>Source</th>
+                        <th style={tableHeaderCellStyle}>Description</th>
+                        <th
+                          style={{
+                            ...tableHeaderCellStyle,
+                            textAlign: "right",
+                          }}
+                        >
+                          Amount
+                        </th>
+                        <th
+                          style={{
+                            ...tableHeaderCellStyle,
+                            textAlign: "center",
+                          }}
+                        >
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {transactions.map((transaction, index) => (
+                        <tr key={index}>
+                          <td style={tableCellStyle}>{transaction.date}</td>
+                          <td style={tableCellStyle}>{transaction.type}</td>
+
+                          <td style={tableCellStyle}>
+                            <select
+                              value={transaction.source}
+                              onChange={(event) =>
+                                updateTransactionSource(
+                                  index,
+                                  event.target.value
+                                )
+                              }
+                              style={selectStyle}
+                            >
+                              {getSourceOptionsByType(transaction.type).map(
+                                (source) => (
+                                  <option key={source} value={source}>
+                                    {source}
+                                  </option>
+                                )
+                              )}
+                            </select>
+                          </td>
+
+                          <td style={tableCellStyle}>
+                            {transaction.description}
+                          </td>
+                          <td style={amountCellStyle}>
+                            {transaction.amount.toFixed(2)}
+                          </td>
+                          <td style={actionCellStyle}>
+                            <button
+                              type="button"
+                              onClick={() => deleteTransactionRow(index)}
+                              style={deleteButtonStyle}
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            ) : (
+              <p>No valid transactions were imported.</p>
+            )}
+          </div>
+        </div>
       )}
     </section>
+  );
+}
+
+function getMissingRequiredColumns(csvHeaders: string[]): string[] {
+  const missingColumns: string[] = [];
+
+  if (!hasMatchingHeader(csvHeaders, dateHeaders)) {
+    missingColumns.push("Date");
+  }
+
+  const hasSingleAmountColumn = hasMatchingHeader(csvHeaders, amountHeaders);
+  const hasDebitOrCreditColumn =
+    hasMatchingHeader(csvHeaders, debitHeaders) ||
+    hasMatchingHeader(csvHeaders, creditHeaders);
+
+  if (!hasSingleAmountColumn && !hasDebitOrCreditColumn) {
+    missingColumns.push("Amount");
+  }
+
+  if (!hasMatchingHeader(csvHeaders, descriptionHeaders)) {
+    missingColumns.push("Description");
+  }
+
+  return missingColumns;
+}
+
+function hasMatchingHeader(csvHeaders: string[], possibleHeaders: string[]) {
+  return possibleHeaders.some((possibleHeader) =>
+    csvHeaders.some(
+      (csvHeader) => normalizeHeader(csvHeader) === normalizeHeader(possibleHeader)
+    )
   );
 }
 
 function convertCsvRowToTransaction(
   row: Record<string, string>
 ): ImportedTransaction | null {
-  const date = getValue(row, ["Date", "Transaction Date", "Posted Date"]);
+  const date = getValue(row, dateHeaders);
 
-  const description = getValue(row, [
-    "Description",
-    "Memo",
-    "Payee",
-    "Details",
-    "Particulars",
-  ]);
+  const description = getValue(row, descriptionHeaders);
 
   const amount = getAmount(row);
 
-  if (!date || !description || amount === null) {
+  if (!isValidDateFormat(date) || !description || amount === null) {
     return null;
   }
 
@@ -147,24 +343,58 @@ function convertCsvRowToTransaction(
 
 function getValue(row: Record<string, string>, possibleHeaders: string[]) {
   for (const header of possibleHeaders) {
-    if (row[header]) {
-      return row[header];
+    const matchingKey = Object.keys(row).find(
+      (key) => normalizeHeader(key) === normalizeHeader(header)
+    );
+
+    if (matchingKey && row[matchingKey]) {
+      return row[matchingKey].trim();
     }
   }
 
   return "";
 }
 
+function normalizeHeader(header: string) {
+  return header.trim().toLowerCase();
+}
+
+function isValidDateFormat(date: string): boolean {
+  const trimmedDate = date.trim();
+
+  const yyyyMmDdSlash = /^\d{4}\/\d{2}\/\d{2}$/;
+  const yyyyMmDdDash = /^\d{4}-\d{2}-\d{2}$/;
+
+  if (!yyyyMmDdSlash.test(trimmedDate) && !yyyyMmDdDash.test(trimmedDate)) {
+    return false;
+  }
+
+  const separator = trimmedDate.includes("/") ? "/" : "-";
+  const [yearText, monthText, dayText] = trimmedDate.split(separator);
+
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+
+  const dateObject = new Date(year, month - 1, day);
+
+  return (
+    dateObject.getFullYear() === year &&
+    dateObject.getMonth() === month - 1 &&
+    dateObject.getDate() === day
+  );
+}
+
 function getAmount(row: Record<string, string>): number | null {
-  const amountText = getValue(row, ["Amount", "Value"]);
+  const amountText = getValue(row, amountHeaders);
 
   if (amountText) {
     const amount = Number(amountText.replace(/[$,]/g, ""));
     return Number.isNaN(amount) ? null : amount;
   }
 
-  const debitText = getValue(row, ["Debit", "Withdrawals"]);
-  const creditText = getValue(row, ["Credit", "Deposits"]);
+  const debitText = getValue(row, debitHeaders);
+  const creditText = getValue(row, creditHeaders);
 
   if (debitText) {
     const debit = Number(debitText.replace(/[$,]/g, ""));
@@ -182,7 +412,7 @@ function getAmount(row: Record<string, string>): number | null {
 function classifyTransactionType(
   amount: number,
   description: string
-): "Income" | "Expense" | "Debt" {
+): TransactionType {
   const text = description.toLowerCase();
 
   if (
@@ -203,7 +433,7 @@ function classifyTransactionType(
 
 function classifyTransactionSource(
   description: string,
-  type: "Income" | "Expense" | "Debt"
+  type: TransactionType
 ): string {
   const text = description.toLowerCase();
 
@@ -284,6 +514,16 @@ function classifyTransactionSource(
   }
 
   if (
+    text.includes("power") ||
+    text.includes("electricity") ||
+    text.includes("water") ||
+    text.includes("internet") ||
+    text.includes("phone bill")
+  ) {
+    return "Utilities";
+  }
+
+  if (
     text.includes("pharmacy") ||
     text.includes("toiletries") ||
     text.includes("skincare")
@@ -291,5 +531,105 @@ function classifyTransactionSource(
     return "Personal Care";
   }
 
-  return "Other";
+  return "Other Expense";
 }
+
+const overlayStyle: React.CSSProperties = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: "100%",
+  backgroundColor: "rgba(0, 0, 0, 0.5)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 1000,
+};
+
+const modalStyle: React.CSSProperties = {
+  backgroundColor: "white",
+  color: "black",
+  padding: "24px",
+  borderRadius: "12px",
+  width: "90%",
+  maxWidth: "1100px",
+  maxHeight: "80vh",
+  overflowY: "auto",
+  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.25)",
+};
+
+const modalHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: "16px",
+};
+
+const closeButtonStyle: React.CSSProperties = {
+  border: "none",
+  background: "none",
+  color: "black",
+  fontSize: "28px",
+  cursor: "pointer",
+};
+
+const tableContainerStyle: React.CSSProperties = {
+  overflowX: "auto",
+  marginTop: "12px",
+  border: "1px solid #ddd",
+  borderRadius: "8px",
+};
+
+const tableStyle: React.CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+  color: "black",
+  fontSize: "14px",
+};
+
+const tableHeaderCellStyle: React.CSSProperties = {
+  borderBottom: "2px solid #ccc",
+  padding: "10px 12px",
+  textAlign: "left",
+  backgroundColor: "#f5f5f5",
+  fontWeight: "bold",
+  position: "sticky",
+  top: 0,
+  zIndex: 1,
+};
+
+const tableCellStyle: React.CSSProperties = {
+  borderBottom: "1px solid #e5e5e5",
+  padding: "10px 12px",
+  textAlign: "left",
+};
+
+const amountCellStyle: React.CSSProperties = {
+  ...tableCellStyle,
+  textAlign: "right",
+  fontFamily: "monospace",
+};
+
+const selectStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "6px 8px",
+  border: "1px solid #ccc",
+  borderRadius: "6px",
+  backgroundColor: "white",
+  color: "black",
+};
+
+const actionCellStyle: React.CSSProperties = {
+  ...tableCellStyle,
+  textAlign: "center",
+};
+
+const deleteButtonStyle: React.CSSProperties = {
+  padding: "6px 10px",
+  border: "1px solid #d9534f",
+  borderRadius: "6px",
+  backgroundColor: "white",
+  color: "#d9534f",
+  cursor: "pointer",
+};
