@@ -1,4 +1,4 @@
-"use client";
+node -v"use client";
 
 import { useState } from "react";
 import { Wrapper, Button, Input, MultiSelect } from "@/app/components/ui/ui";
