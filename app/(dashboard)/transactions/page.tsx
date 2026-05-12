@@ -28,8 +28,14 @@ const categoryOptions: Record<TransactionType, string[]> = {
 
 export default function TransactionsPage() {
   const [showPopup, setShowPopup] = useState(false);
+  const [showFilterPopup, setShowFilterPopup] = useState(false);
+
   const [deleteMode, setDeleteMode] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
   const [selectedTransactions, setSelectedTransactions] = useState<number[]>([]);
+  const [filterDate, setFilterDate] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const transactionsPerPage = 20;
@@ -71,33 +77,29 @@ export default function TransactionsPage() {
       date: "2028-04-19",
       type: "Expense",
     },
-    {
-      description: "Bus",
-      amount: 4.5,
-      category: "Transport",
-      date: "2028-04-18",
-      type: "Expense",
-    },
-    {
-      description: "Scholarship",
-      amount: 500,
-      category: "Scholarship",
-      date: "2028-04-17",
-      type: "Income",
-    },
-    {
-      description: "Rent",
-      amount: 280,
-      category: "Accommodation",
-      date: "2028-04-16",
-      type: "Expense",
-    },
   ]);
 
-  const totalPages = Math.ceil(transactions.length / transactionsPerPage);
+  const filteredTransactions =
+    filterDate === ""
+      ? transactions
+      : transactions.filter((transaction) => transaction.date === filterDate);
+
+  const totalPages = Math.ceil(
+    filteredTransactions.length / transactionsPerPage
+  );
+
   const startIndex = (currentPage - 1) * transactionsPerPage;
   const endIndex = startIndex + transactionsPerPage;
-  const currentTransactions = transactions.slice(startIndex, endIndex);
+  const currentTransactions = filteredTransactions.slice(startIndex, endIndex);
+
+  const resetForm = () => {
+    setDescription("");
+    setAmount("");
+    setCategory("");
+    setTransactionDate("");
+    setTransactionType("Expense");
+    setEditingIndex(null);
+  };
 
   const addTransaction = () => {
     if (description === "" || amount === "" || transactionDate === "") {
@@ -113,13 +115,62 @@ export default function TransactionsPage() {
     };
 
     setTransactions([newTransaction, ...transactions]);
-
-    setDescription("");
-    setAmount("");
-    setCategory("");
-    setTransactionDate("");
-    setTransactionType("Expense");
+    resetForm();
     setCurrentPage(1);
+    setShowPopup(false);
+  };
+
+  const handleEditClick = () => {
+    setEditMode(!editMode);
+    setDeleteMode(false);
+    setSelectedTransactions([]);
+  };
+
+  const openEditPopup = (actualIndex: number) => {
+    if (!editMode || deleteMode) return;
+
+    const transaction = transactions[actualIndex];
+
+    setEditingIndex(actualIndex);
+    setDescription(transaction.description);
+    setAmount(String(transaction.amount));
+    setCategory(transaction.category === "Auto" ? "" : transaction.category);
+    setTransactionDate(transaction.date);
+    setTransactionType(transaction.type);
+    setShowPopup(true);
+  };
+
+  const confirmEditTransaction = () => {
+    if (
+      editingIndex === null ||
+      description === "" ||
+      amount === "" ||
+      transactionDate === ""
+    ) {
+      return;
+    }
+
+    const updatedTransaction: Transaction = {
+      description,
+      amount: Number(amount),
+      category: category === "" ? "Auto" : category,
+      date: transactionDate,
+      type: transactionType,
+    };
+
+    setTransactions(
+      transactions.map((transaction, index) =>
+        index === editingIndex ? updatedTransaction : transaction
+      )
+    );
+
+    resetForm();
+    setEditMode(false);
+    setShowPopup(false);
+  };
+
+  const cancelPopup = () => {
+    resetForm();
     setShowPopup(false);
   };
 
@@ -163,6 +214,7 @@ export default function TransactionsPage() {
   const handleDeleteClick = () => {
     if (!deleteMode) {
       setDeleteMode(true);
+      setEditMode(false);
       setSelectedTransactions([]);
       return;
     }
@@ -217,7 +269,12 @@ export default function TransactionsPage() {
             className="flex-1 bg-zinc-900 border border-zinc-600 rounded-lg px-4 py-2 text-white"
           />
 
-          <button className="bg-white text-black px-4 py-2 rounded-lg">
+          <button
+            onClick={handleEditClick}
+            className={`px-4 py-2 rounded-lg ${
+              editMode ? "bg-blue-600 text-white" : "bg-white text-black"
+            }`}
+          >
             Edit
           </button>
 
@@ -230,17 +287,36 @@ export default function TransactionsPage() {
             🗑 Delete
           </button>
 
-          <button className="bg-white text-black px-4 py-2 rounded-lg">
+          <button
+            onClick={() => setShowFilterPopup(true)}
+            className="bg-white text-black px-4 py-2 rounded-lg"
+          >
             Filter
           </button>
 
           <button
-            onClick={() => setShowPopup(true)}
+            onClick={() => {
+              resetForm();
+              setEditMode(false);
+              setShowPopup(true);
+            }}
             className="bg-white text-black px-4 py-2 rounded-lg"
           >
             + New Transaction
           </button>
         </div>
+
+        {filterDate !== "" && (
+          <p className="text-sm text-zinc-400 mb-3">
+            Showing transactions from: {filterDate}
+          </p>
+        )}
+
+        {editMode && (
+          <p className="text-sm text-blue-400 mb-3">
+            Edit mode is on. Click a transaction to edit it.
+          </p>
+        )}
 
         {deleteMode && (
           <div className="flex items-center gap-2 mb-3 text-sm">
@@ -262,9 +338,7 @@ export default function TransactionsPage() {
         )}
 
         <div className="bg-zinc-800 rounded-lg p-2">
-          <p className="text-xs mb-2">
-            Transactions | {transactions.length} total
-          </p>
+         
 
           {currentTransactions.map((transaction, index) => {
             const actualIndex = startIndex + index;
@@ -272,7 +346,10 @@ export default function TransactionsPage() {
             return (
               <div
                 key={actualIndex}
-                className="bg-zinc-900 rounded-lg p-4 flex items-center mb-2"
+                onClick={() => openEditPopup(actualIndex)}
+                className={`bg-zinc-900 rounded-lg p-4 flex items-center mb-2 ${
+                  editMode ? "cursor-pointer border border-blue-500" : ""
+                }`}
               >
                 {deleteMode && (
                   <input
@@ -356,17 +433,65 @@ export default function TransactionsPage() {
         )}
       </div>
 
-      {showPopup && (
+      {showFilterPopup && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="relative bg-zinc-950 border border-zinc-700 rounded-xl p-6 w-[430px] text-white">
+          <div className="relative bg-zinc-950 border border-zinc-700 rounded-xl p-6 w-[360px] text-white">
             <button
-              onClick={() => setShowPopup(false)}
+              onClick={() => setShowFilterPopup(false)}
               className="absolute right-4 top-4 bg-white text-black px-3 py-1 rounded-lg font-bold"
             >
               X
             </button>
 
-            <h2 className="text-3xl font-bold mb-4">New Transaction</h2>
+            <h2 className="text-2xl font-bold mb-4">Filter by Date</h2>
+
+            <label className="block mb-1">Select Date</label>
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(event) => setFilterDate(event.target.value)}
+              className="w-full mb-5 p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white"
+            />
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setFilterDate("");
+                  setCurrentPage(1);
+                  setShowFilterPopup(false);
+                }}
+                className="w-full bg-zinc-700 text-white py-3 rounded-lg font-bold"
+              >
+                Clear
+              </button>
+
+              <button
+                onClick={() => {
+                  setCurrentPage(1);
+                  setShowFilterPopup(false);
+                }}
+                className="w-full bg-white text-black py-3 rounded-lg font-bold"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPopup && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="relative bg-zinc-950 border border-zinc-700 rounded-xl p-6 w-[430px] text-white">
+            <button
+              onClick={cancelPopup}
+              className="absolute right-4 top-4 bg-white text-black px-3 py-1 rounded-lg font-bold"
+            >
+              X
+            </button>
+
+            <h2 className="text-3xl font-bold mb-4">
+              {editingIndex === null ? "New Transaction" : "Edit Transaction"}
+            </h2>
 
             <div className="flex gap-2 mb-4">
               {(["Expense", "Income", "Debt"] as TransactionType[]).map(
@@ -387,10 +512,6 @@ export default function TransactionsPage() {
                   </button>
                 )
               )}
-
-              <button className="ml-auto bg-white text-black px-4 py-2 rounded-lg">
-                Add From CSV
-              </button>
             </div>
 
             <label className="block mb-1">
@@ -437,12 +558,23 @@ export default function TransactionsPage() {
               className="w-full mb-5 p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white"
             />
 
-            <button
-              onClick={addTransaction}
-              className="w-full bg-white text-black py-3 rounded-lg font-bold"
-            >
-              Add Transaction
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={cancelPopup}
+                className="w-full bg-zinc-700 text-white py-3 rounded-lg font-bold"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={
+                  editingIndex === null ? addTransaction : confirmEditTransaction
+                }
+                className="w-full bg-white text-black py-3 rounded-lg font-bold"
+              >
+                {editingIndex === null ? "Add Transaction" : "Confirm Edit"}
+              </button>
+            </div>
           </div>
         </div>
       )}
