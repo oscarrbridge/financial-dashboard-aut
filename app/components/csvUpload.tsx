@@ -50,7 +50,11 @@ const expenseSourceOptions = [
 
 const debtSourceOptions = ["Loan Repayment", "Credit Card", "Other Debt"];
 
-export default function CsvUpload() {
+type CsvUploadProps = {
+  onConfirmImport: (transactions: ImportedTransaction[]) => void;
+};
+
+export default function CsvUpload({ onConfirmImport }: CsvUploadProps)  {
   const [transactions, setTransactions] = useState<ImportedTransaction[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -141,6 +145,13 @@ export default function CsvUpload() {
     );
   }
 
+  function confirmImport() {
+    onConfirmImport(transactions);
+    setTransactions([]);
+    setErrors([]);
+    setIsModalOpen(false);
+  }
+
   function getSourceOptionsByType(type: TransactionType) {
     if (type === "Income") {
       return incomeSourceOptions;
@@ -155,7 +166,6 @@ export default function CsvUpload() {
 
   return (
     <section>
-      <h2>Upload CSV</h2>
 
       <input
         ref={fileInputRef}
@@ -165,10 +175,13 @@ export default function CsvUpload() {
         style={{ display: "none" }}
       />
 
-      <Button
-        buttonText="Upload CSV"
+      <button
+        type="button"
         onClick={() => fileInputRef.current?.click()}
-      />
+        className="w-full bg-white text-black py-3 rounded-lg font-bold"
+      >
+        CSV Import
+      </button>
 
       {isModalOpen && (
         <div style={overlayStyle}>
@@ -274,6 +287,14 @@ export default function CsvUpload() {
                     </tbody>
                   </table>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={confirmImport}
+                  style={confirmButtonStyle}
+                >
+                  Confirm Import
+                </button>
               </section>
             ) : (
               <p>No valid transactions were imported.</p>
@@ -639,5 +660,17 @@ const deleteButtonStyle: React.CSSProperties = {
   borderRadius: "6px",
   backgroundColor: "white",
   color: "#d9534f",
+  cursor: "pointer",
+};
+
+const confirmButtonStyle: React.CSSProperties = {
+  marginTop: "16px",
+  width: "100%",
+  padding: "12px",
+  border: "none",
+  borderRadius: "8px",
+  backgroundColor: "black",
+  color: "white",
+  fontWeight: "bold",
   cursor: "pointer",
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CsvUpload from "../../components/csvUpload";
 
 type TransactionType = "Expense" | "Income" | "Debt";
 
@@ -240,6 +241,30 @@ export default function TransactionsPage() {
   const totalExpenses = transactions
     .filter((transaction) => transaction.type === "Expense")
     .reduce((total, transaction) => total + transaction.amount, 0);
+
+  
+  const handleConfirmCsvImport = (
+  importedTransactions: {
+    date: string;
+    type: TransactionType;
+    source: string;
+    description: string;
+    amount: number;
+  }[]
+  ) => {
+    const convertedTransactions: Transaction[] = importedTransactions.map(
+      (transaction) => ({
+        description: transaction.description,
+        amount: Math.abs(transaction.amount),
+        category: transaction.source,
+        date: transaction.date,
+        type: transaction.type,
+      })
+    );
+
+    setTransactions([...convertedTransactions, ...transactions]);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
@@ -492,6 +517,12 @@ export default function TransactionsPage() {
             <h2 className="text-3xl font-bold mb-4">
               {editingIndex === null ? "New Transaction" : "Edit Transaction"}
             </h2>
+
+            {editingIndex === null && (
+              <div className="mb-4 border border-zinc-700 rounded-lg p-3">
+                <CsvUpload onConfirmImport={handleConfirmCsvImport} />
+              </div>
+            )}
 
             <div className="flex gap-2 mb-4">
               {(["Expense", "Income", "Debt"] as TransactionType[]).map(
