@@ -454,16 +454,24 @@ function classifyTransactionSource(
       return "Student Allowance";
     }
 
+    if (text.includes("family") || text.includes("support")) {
+      return "Family Support";
+    }
+
     return "Other Income";
   }
 
   if (type === "Debt") {
-    if (text.includes("loan")) {
-      return "Loan Repayment";
+    if (text.includes("student loan")) {
+      return "Student Loan";
     }
 
     if (text.includes("credit card")) {
       return "Credit Card";
+    }
+
+    if (text.includes("personal loan")) {
+      return "Personal Loan";
     }
 
     return "Other Debt";
@@ -483,7 +491,7 @@ function classifyTransactionSource(
     text.includes("new world") ||
     text.includes("grocery")
   ) {
-    return "Food & Groceries";
+    return "Groceries";
   }
 
   if (

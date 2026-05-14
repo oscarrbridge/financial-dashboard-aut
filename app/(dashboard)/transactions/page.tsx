@@ -5,7 +5,6 @@ export default function TransactionsPage() {
     <main>
       <h1>Transactions</h1>
 
-      <CsvUpload />
     </main>
   );
 }
