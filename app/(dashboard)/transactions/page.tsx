@@ -116,10 +116,15 @@ export default function TransactionsPage() {
     source: "manual",
   };
 
-  await addTransactionToFirestore(user.uid, newTransaction);
+  const newTransactionId = await addTransactionToFirestore(
+    user.uid,
+    newTransaction
+  );
 
-  const savedTransactions = await getUserTransactions(user.uid);
-  setTransactions(savedTransactions);
+  setTransactions((currentTransactions) => [
+    { ...newTransaction, id: newTransactionId },
+    ...currentTransactions,
+  ]);
 
   resetForm();
   setCurrentPage(1);
@@ -187,8 +192,11 @@ export default function TransactionsPage() {
       updatedTransaction
     );
 
-    const savedTransactions = await getUserTransactions(user.uid);
-    setTransactions(savedTransactions);
+    setTransactions((currentTransactions) =>
+      currentTransactions.map((transaction) =>
+        transaction.id === transactionToEdit.id ? updatedTransaction : transaction
+      )
+    );
 
     resetForm();
     setEditMode(false);
@@ -262,8 +270,15 @@ export default function TransactionsPage() {
       await deleteTransactionFromFirestore(user.uid, transaction.id!);
     }
 
-    const savedTransactions = await getUserTransactions(user.uid);
-    setTransactions(savedTransactions);
+    const deletedIds = transactionsToDelete.map(
+      (transaction) => transaction.id
+    );
+
+    setTransactions((currentTransactions) =>
+      currentTransactions.filter(
+        (transaction) => !deletedIds.includes(transaction.id)
+      )
+    );
 
     setSelectedTransactions([]);
     setDeleteMode(false);

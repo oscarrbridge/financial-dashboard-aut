@@ -31,12 +31,14 @@ export async function addTransactionToFirestore(
 ) {
   const transactionsRef = collection(db, "users", uid, "transactions");
 
-  await addDoc(transactionsRef, {
+  const docRef = await addDoc(transactionsRef, {
     ...transaction,
     source: transaction.source ?? "manual",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+
+  return docRef.id;
 }
 
 export async function getUserTransactions(uid: string): Promise<Transaction[]> {
