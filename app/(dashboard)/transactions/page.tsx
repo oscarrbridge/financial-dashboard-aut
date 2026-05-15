@@ -1,16 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CsvUpload from "../../components/csvUpload";
+import { requireAuth } from "@/lib/firebase/requireAuth";
+
+import {
+  addTransactionToFirestore,
+  addTransactionsBatchToFirestore,
+  getUserTransactions,
+  updateTransactionInFirestore,
+  deleteTransactionFromFirestore,
+} from "@/lib/firebase/transactions";
+
+
 
 type TransactionType = "Expense" | "Income" | "Debt";
 
 type Transaction = {
+  id?: string;
   description: string;
   amount: number;
   category: string;
   date: string;
   type: TransactionType;
+  source?: "manual" | "csv";
 };
 
 const categoryOptions: Record<TransactionType, string[]> = {
@@ -28,6 +41,28 @@ const categoryOptions: Record<TransactionType, string[]> = {
 };
 
 export default function TransactionsPage() {
+
+  const { user, loading } = requireAuth();
+
+  if (loading) {
+    return <p className="text-white">Loading...</p>;
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  useEffect(() => {
+    async function loadTransactions() {
+      if (!user) return;
+
+      const savedTransactions = await getUserTransactions(user.uid);
+      setTransactions(savedTransactions);
+    }
+
+    loadTransactions();
+  }, [user]);
+
   const [showPopup, setShowPopup] = useState(false);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
 
@@ -102,23 +137,32 @@ export default function TransactionsPage() {
     setEditingIndex(null);
   };
 
-  const addTransaction = () => {
-    if (description === "" || amount === "" || transactionDate === "") {
-      return;
-    }
+  const addTransaction = async () => {
+  if (description === "" || amount === "" || transactionDate === "") {
+    return;
+  }
 
-    const newTransaction: Transaction = {
-      description,
-      amount: Number(amount),
-      category: category === "" ? "Auto" : category,
-      date: transactionDate,
-      type: transactionType,
-    };
+  if (!user) {
+    return;
+  }
 
-    setTransactions([newTransaction, ...transactions]);
-    resetForm();
-    setCurrentPage(1);
-    setShowPopup(false);
+  const newTransaction: Transaction = {
+    description,
+    amount: Number(amount),
+    category: category === "" ? "Auto" : category,
+    date: transactionDate,
+    type: transactionType,
+    source: "manual",
+  };
+
+  await addTransactionToFirestore(user.uid, newTransaction);
+
+  const savedTransactions = await getUserTransactions(user.uid);
+  setTransactions(savedTransactions);
+
+  resetForm();
+  setCurrentPage(1);
+  setShowPopup(false);
   };
 
   const handleEditClick = () => {
@@ -141,7 +185,7 @@ export default function TransactionsPage() {
     setShowPopup(true);
   };
 
-  const confirmEditTransaction = () => {
+  const confirmEditTransaction = async () => {
     if (
       editingIndex === null ||
       description === "" ||
@@ -151,19 +195,34 @@ export default function TransactionsPage() {
       return;
     }
 
+    if (!user) {
+      return;
+    }
+
+    const transactionToEdit = transactions[editingIndex];
+
+    if (!transactionToEdit.id) {
+      return;
+    }
+
     const updatedTransaction: Transaction = {
+      id: transactionToEdit.id,
       description,
       amount: Number(amount),
       category: category === "" ? "Auto" : category,
       date: transactionDate,
       type: transactionType,
+      source: transactionToEdit.source,
     };
 
-    setTransactions(
-      transactions.map((transaction, index) =>
-        index === editingIndex ? updatedTransaction : transaction
-      )
+    await updateTransactionInFirestore(
+      user.uid,
+      transactionToEdit.id,
+      updatedTransaction
     );
+
+    const savedTransactions = await getUserTransactions(user.uid);
+    setTransactions(savedTransactions);
 
     resetForm();
     setEditMode(false);
@@ -212,7 +271,7 @@ export default function TransactionsPage() {
     }
   };
 
-  const handleDeleteClick = () => {
+  const handleDeleteClick = async () => {
     if (!deleteMode) {
       setDeleteMode(true);
       setEditMode(false);
@@ -225,9 +284,20 @@ export default function TransactionsPage() {
       return;
     }
 
-    setTransactions(
-      transactions.filter((_, index) => !selectedTransactions.includes(index))
-    );
+    if (!user) {
+      return;
+    }
+
+    const transactionsToDelete = selectedTransactions
+      .map((index) => transactions[index])
+      .filter((transaction) => transaction?.id);
+
+    for (const transaction of transactionsToDelete) {
+      await deleteTransactionFromFirestore(user.uid, transaction.id!);
+    }
+
+    const savedTransactions = await getUserTransactions(user.uid);
+    setTransactions(savedTransactions);
 
     setSelectedTransactions([]);
     setDeleteMode(false);
@@ -243,15 +313,19 @@ export default function TransactionsPage() {
     .reduce((total, transaction) => total + transaction.amount, 0);
 
   
-  const handleConfirmCsvImport = (
-  importedTransactions: {
-    date: string;
-    type: TransactionType;
-    source: string;
-    description: string;
-    amount: number;
-  }[]
+  const handleConfirmCsvImport = async (
+    importedTransactions: {
+      date: string;
+      type: TransactionType;
+      source: string;
+      description: string;
+      amount: number;
+    }[]
   ) => {
+    if (!user) {
+      return;
+    }
+
     const convertedTransactions: Transaction[] = importedTransactions.map(
       (transaction) => ({
         description: transaction.description,
@@ -259,10 +333,14 @@ export default function TransactionsPage() {
         category: transaction.source,
         date: transaction.date,
         type: transaction.type,
+        source: "csv",
       })
     );
 
-    setTransactions([...convertedTransactions, ...transactions]);
+    await addTransactionsBatchToFirestore(user.uid, convertedTransactions);
+
+    const savedTransactions = await getUserTransactions(user.uid);
+    setTransactions(savedTransactions);
     setCurrentPage(1);
   };
 
