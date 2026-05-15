@@ -100,3 +100,289 @@ export async function addTransactionsBatchToFirestore(
     await batch.commit();
   }
 }
+
+
+
+const incomeKeywordMap: Record<string, string[]> = {
+  Wages: [
+    "wage",
+    "wages",
+    "salary",
+    "payroll",
+    "pay",
+    "income",
+    "work payment",
+    "employer",
+    "part time",
+    "part-time",
+    "job",
+  ],
+
+  Scholarship: [
+    "scholarship",
+    "grant",
+    "study grant",
+    "award",
+    "bursary",
+  ],
+
+  "Student Allowance": [
+    "student allowance",
+    "allowance",
+    "studylink",
+    "study link",
+    "living costs",
+  ],
+
+  "Family Support": [
+    "family",
+    "parent",
+    "parents",
+    "mum",
+    "dad",
+    "mother",
+    "father",
+    "support",
+    "transfer from family",
+  ],
+};
+
+const debtKeywordMap: Record<string, string[]> = {
+  "Student Loan": [
+    "student loan",
+    "studylink loan",
+    "study loan",
+    "loan repayment",
+    "student debt",
+  ],
+
+  "Credit Card": [
+    "credit card",
+    "visa",
+    "mastercard",
+    "card repayment",
+    "card payment",
+  ],
+
+  "Personal Loan": [
+    "personal loan",
+    "loan",
+    "repayment",
+    "finance",
+    "borrow",
+    "borrowed",
+  ],
+};
+
+const expenseKeywordMap: Record<string, string[]> = {
+  Accommodation: [
+    "rent",
+    "landlord",
+    "flat",
+    "flatting",
+    "board",
+    "boarding",
+    "accommodation",
+    "housing",
+    "apartment",
+    "room",
+    "hostel",
+    "hall",
+    "residence",
+    "property",
+  ],
+
+  "Groceries": [
+    "countdown",
+    "woolworths",
+    "new world",
+    "paknsave",
+    "pak n save",
+    "pak'n save",
+    "freshchoice",
+    "supervalue",
+    "grocery",
+    "groceries",
+    "supermarket",
+    "dairy",
+    "fruit",
+    "vegetables",
+    "butcher",
+    "bakery"
+  ],
+
+  "Food & Dining": [
+    "lunch",
+    "dinner",
+    "breakfast",
+    "meal",
+    "restaurant",
+    "cafe",
+    "coffee",
+    "takeaway",
+    "food",
+    "mcdonald",
+    "kfc",
+    "burger king",
+    "subway",
+    "dominos",
+    "pizza",
+    "sushi",
+    "noodle",
+    "ramen",
+    "uber eats",
+    "doordash",
+    "menulog"
+  ],
+
+  Transport: [
+    "at hop",
+    "hop card",
+    "transport",
+    "bus",
+    "train",
+    "ferry",
+    "uber",
+    "ola",
+    "taxi",
+    "fuel",
+    "petrol",
+    "diesel",
+    "z energy",
+    "bp",
+    "mobil",
+    "caltex",
+    "parking",
+    "car park",
+    "toll",
+    "rego",
+    "registration",
+    "wof",
+  ],
+
+  Education: [
+    "textbook",
+    "book",
+    "stationery",
+    "course",
+    "tuition",
+    "university",
+    "aut",
+    "auckland university",
+    "student services",
+    "printing",
+    "library",
+    "exam",
+    "assignment",
+    "school",
+    "college",
+    "fees",
+    "study",
+    "software license",
+    "udemy",
+    "coursera",
+  ],
+
+  Entertainment: [
+    "netflix",
+    "spotify",
+    "youtube premium",
+    "disney",
+    "prime video",
+    "movie",
+    "cinema",
+    "event",
+    "concert",
+    "game",
+    "gaming",
+    "steam",
+    "playstation",
+    "xbox",
+    "nintendo",
+    "bar",
+    "club",
+    "bowling",
+    "ticket",
+    "entertainment",
+  ],
+
+  Utilities: [
+    "power",
+    "electricity",
+    "water",
+    "gas",
+    "internet",
+    "wifi",
+    "broadband",
+    "phone bill",
+    "mobile",
+    "spark",
+    "one nz",
+    "vodafone",
+    "2degrees",
+    "contact energy",
+    "mercury",
+    "genesis",
+    "trustpower",
+    "utility",
+    "utilities",
+  ],
+
+  "Personal Care": [
+    "pharmacy",
+    "chemist",
+    "toiletries",
+    "skincare",
+    "haircut",
+    "hairdresser",
+    "barber",
+    "salon",
+    "doctor",
+    "dentist",
+    "medical",
+    "health",
+    "gym",
+    "fitness",
+    "clothing",
+    "clothes",
+    "shoes",
+    "kmart",
+    "warehouse",
+    "cotton on",
+    "h&m",
+  ],
+};
+
+function findCategoryFromKeywords(
+  text: string,
+  keywordMap: Record<string, string[]>
+): string | null {
+  for (const [category, keywords] of Object.entries(keywordMap)) {
+    const matchedKeyword = keywords.some((keyword) =>
+      text.includes(keyword.toLowerCase())
+    );
+
+    if (matchedKeyword) {
+      return category;
+    }
+  }
+
+  return null;
+}
+
+export function autoCategorizeTransaction(
+  description: string,
+  type: TransactionType
+): string {
+  const text = description.toLowerCase();
+
+  if (type === "Income") {
+    return findCategoryFromKeywords(text, incomeKeywordMap) ?? "Other Income";
+  }
+
+  if (type === "Debt") {
+    return findCategoryFromKeywords(text, debtKeywordMap) ?? "Other Debt";
+  }
+
+  return findCategoryFromKeywords(text, expenseKeywordMap) ?? "Other Expense";
+}

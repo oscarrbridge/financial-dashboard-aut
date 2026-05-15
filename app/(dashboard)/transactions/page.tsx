@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import CsvUpload from "../../components/csvUpload";
 import { requireAuth } from "@/lib/firebase/requireAuth";
+import { autoCategorizeTransaction } from "@/lib/firebase/transactions";
 
 import {
   addTransactionToFirestore,
@@ -35,9 +36,11 @@ const categoryOptions: Record<TransactionType, string[]> = {
     "Entertainment",
     "Education",
     "Personal Care",
+    "Food & Dining",
+    "Other Expense"
   ],
-  Income: ["Wages", "Scholarship", "Student Allowance", "Family Support"],
-  Debt: ["Student Loan", "Credit Card", "Personal Loan"],
+  Income: ["Wages", "Scholarship", "Student Allowance", "Family Support", "Other Income"],
+  Debt: ["Student Loan", "Credit Card", "Personal Loan", "Other Debt"],
 };
 
 export default function TransactionsPage() {
@@ -146,10 +149,15 @@ export default function TransactionsPage() {
     return;
   }
 
+  const selectedCategory =
+  category === ""
+    ? autoCategorizeTransaction(description, transactionType)
+    : category;
+
   const newTransaction: Transaction = {
     description,
     amount: Number(amount),
-    category: category === "" ? "Auto" : category,
+    category: selectedCategory,
     date: transactionDate,
     type: transactionType,
     source: "manual",
@@ -205,11 +213,16 @@ export default function TransactionsPage() {
       return;
     }
 
+    const selectedCategory =
+      category === ""
+        ? autoCategorizeTransaction(description, transactionType)
+        : category;
+
     const updatedTransaction: Transaction = {
       id: transactionToEdit.id,
       description,
       amount: Number(amount),
-      category: category === "" ? "Auto" : category,
+      category: selectedCategory,
       date: transactionDate,
       type: transactionType,
       source: transactionToEdit.source,

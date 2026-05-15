@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Papa from "papaparse";
 import { Button } from "@/app/components/ui/ui";
+import { autoCategorizeTransaction } from "@/lib/firebase/transactions";
 
 type TransactionType = "Income" | "Expense" | "Debt";
 
@@ -34,21 +35,29 @@ const incomeSourceOptions = [
   "Wages",
   "Scholarship",
   "Student Allowance",
+  "Family Support",
   "Other Income",
 ];
 
 const expenseSourceOptions = [
   "Accommodation",
-  "Food & Groceries",
-  "Transport",
-  "Education",
-  "Entertainment",
   "Utilities",
+  "Transport",
+  "Groceries",
+  "Entertainment",
+  "Education",
   "Personal Care",
+  "Food & Dining",
   "Other Expense",
+  
 ];
 
-const debtSourceOptions = ["Loan Repayment", "Credit Card", "Other Debt"];
+const debtSourceOptions = [
+  "Student Loan",
+  "Credit Card",
+  "Personal Loan",
+  "Other Debt",
+];
 
 type CsvUploadProps = {
   onConfirmImport: (transactions: ImportedTransaction[]) => void;
@@ -351,7 +360,7 @@ function convertCsvRowToTransaction(
   }
 
   const type = classifyTransactionType(amount, description);
-  const source = classifyTransactionSource(description, type);
+  const source = autoCategorizeTransaction(description, type);
 
   return {
     date,
@@ -452,116 +461,7 @@ function classifyTransactionType(
   return "Expense";
 }
 
-function classifyTransactionSource(
-  description: string,
-  type: TransactionType
-): string {
-  const text = description.toLowerCase();
 
-  if (type === "Income") {
-    if (
-      text.includes("wage") ||
-      text.includes("salary") ||
-      text.includes("payroll")
-    ) {
-      return "Wages";
-    }
-
-    if (text.includes("scholarship")) {
-      return "Scholarship";
-    }
-
-    if (text.includes("allowance")) {
-      return "Student Allowance";
-    }
-
-    if (text.includes("family") || text.includes("support")) {
-      return "Family Support";
-    }
-
-    return "Other Income";
-  }
-
-  if (type === "Debt") {
-    if (text.includes("student loan")) {
-      return "Student Loan";
-    }
-
-    if (text.includes("credit card")) {
-      return "Credit Card";
-    }
-
-    if (text.includes("personal loan")) {
-      return "Personal Loan";
-    }
-
-    return "Other Debt";
-  }
-
-  if (
-    text.includes("rent") ||
-    text.includes("landlord") ||
-    text.includes("board")
-  ) {
-    return "Accommodation";
-  }
-
-  if (
-    text.includes("countdown") ||
-    text.includes("pak") ||
-    text.includes("new world") ||
-    text.includes("grocery")
-  ) {
-    return "Groceries";
-  }
-
-  if (
-    text.includes("at hop") ||
-    text.includes("transport") ||
-    text.includes("uber") ||
-    text.includes("fuel") ||
-    text.includes("z energy")
-  ) {
-    return "Transport";
-  }
-
-  if (
-    text.includes("textbook") ||
-    text.includes("stationery") ||
-    text.includes("course")
-  ) {
-    return "Education";
-  }
-
-  if (
-    text.includes("netflix") ||
-    text.includes("spotify") ||
-    text.includes("movie") ||
-    text.includes("cinema")
-  ) {
-    return "Entertainment";
-  }
-
-  if (
-    text.includes("power") ||
-    text.includes("electricity") ||
-    text.includes("water") ||
-    text.includes("internet") ||
-    text.includes("phone bill")
-  ) {
-    return "Utilities";
-  }
-
-  if (
-    text.includes("pharmacy") ||
-    text.includes("toiletries") ||
-    text.includes("skincare")
-  ) {
-    return "Personal Care";
-  }
-
-  return "Other Expense";
-}
 
 const overlayStyle: React.CSSProperties = {
   position: "fixed",
