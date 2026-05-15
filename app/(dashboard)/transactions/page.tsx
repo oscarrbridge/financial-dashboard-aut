@@ -47,24 +47,6 @@ export default function TransactionsPage() {
 
   const { user, loading } = requireAuth();
 
-  if (loading) {
-    return <p className="text-white">Loading...</p>;
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  useEffect(() => {
-    async function loadTransactions() {
-      if (!user) return;
-
-      const savedTransactions = await getUserTransactions(user.uid);
-      setTransactions(savedTransactions);
-    }
-
-    loadTransactions();
-  }, [user]);
 
   const [showPopup, setShowPopup] = useState(false);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
@@ -87,36 +69,7 @@ export default function TransactionsPage() {
   const [category, setCategory] = useState("");
   const [transactionDate, setTransactionDate] = useState("");
 
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    {
-      description: "Mc Donalds",
-      amount: 17.8,
-      category: "Groceries",
-      date: "2028-04-22",
-      type: "Expense",
-    },
-    {
-      description: "Income",
-      amount: 382.44,
-      category: "Wages",
-      date: "2028-04-21",
-      type: "Income",
-    },
-    {
-      description: "Student Loan",
-      amount: 1200,
-      category: "Student Loan",
-      date: "2028-04-20",
-      type: "Debt",
-    },
-    {
-      description: "Spotify",
-      amount: 6.99,
-      category: "Entertainment",
-      date: "2028-04-19",
-      type: "Expense",
-    },
-  ]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const filteredTransactions =
     filterDate === ""
@@ -356,6 +309,27 @@ export default function TransactionsPage() {
     setTransactions(savedTransactions);
     setCurrentPage(1);
   };
+
+  useEffect(() => {
+    async function loadTransactions() {
+      if (!user) return;
+
+      const savedTransactions = await getUserTransactions(user.uid);
+      setTransactions(savedTransactions);
+    }
+
+    loadTransactions();
+  }, [user]);
+
+  if (loading) {
+    return <p className="text-white">Loading...</p>;
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
