@@ -1,0 +1,97 @@
+Date,Unique Id,Tran Type,Payee,Memo,Amount
+2026/01/03,2026010301,EFTPOS,Countdown,"Groceries",-68.45
+2026/01/04,2026010401,EFTPOS,Auckland Transport,"AT HOP top up",-25.00
+2026/01/05,2026010501,TFR IN,Part Time Wages,"Weekly wages",342.80
+2026/01/06,2026010601,EFTPOS,Cityfitness,"Gym membership",-17.99
+2026/01/07,2026010701,EFTPOS,Warehouse Stationery,"Notebook and pens",-14.60
+2026/01/08,2026010801,EFTPOS,McDonalds,"Lunch",-12.40
+2026/01/10,2026011001,A/P,Landlord,"Weekly rent",-230.00
+2026/01/12,2026011201,EFTPOS,PAK'nSAVE,"Groceries",-91.25
+2026/01/13,2026011301,EFTPOS,Netflix,"Streaming subscription",-18.99
+2026/01/15,2026011501,TFR IN,Student Allowance,"Weekly allowance",302.50
+2026/01/16,2026011601,EFTPOS,Uniprint,"Printing credit",-8.00
+2026/01/18,2026011801,EFTPOS,Kmart,"Household items",-36.70
+2026/01/20,2026012001,EFTPOS,Z Energy,"Fuel",-52.30
+2026/01/22,2026012201,EFTPOS,Sushi Pac,"Dinner",-16.80
+2026/01/24,2026012401,A/P,Landlord,"Weekly rent",-230.00
+2026/01/27,2026012701,EFTPOS,New World,"Groceries",-74.10
+2026/01/29,2026012901,TFR IN,Part Time Wages,"Weekly wages",355.40
+2026/01/30,2026013001,EFTPOS,Spotify,"Music subscription",-14.99
+2026/02/01,2026020101,EFTPOS,Auckland Transport,"AT HOP top up",-30.00
+2026/02/03,2026020301,EFTPOS,Countdown,"Groceries",-82.55
+2026/02/05,2026020501,TFR IN,Student Allowance,"Weekly allowance",302.50
+2026/02/06,2026020601,EFTPOS,PB Tech,"USB-C cable",-24.90
+2026/02/07,2026020701,A/P,Landlord,"Weekly rent",-230.00
+2026/02/08,2026020801,EFTPOS,Dominos,"Pizza",-21.99
+2026/02/10,2026021001,EFTPOS,Cityfitness,"Gym membership",-17.99
+2026/02/12,2026021201,EFTPOS,PAK'nSAVE,"Groceries",-96.80
+2026/02/14,2026021401,EFTPOS,Hoyts,"Movie ticket",-19.50
+2026/02/15,2026021501,TFR IN,Part Time Wages,"Weekly wages",328.75
+2026/02/17,2026021701,EFTPOS,Whitcoulls,"Course textbook",-79.99
+2026/02/19,2026021901,EFTPOS,Auckland Transport,"AT HOP top up",-25.00
+2026/02/21,2026022101,A/P,Landlord,"Weekly rent",-230.00
+2026/02/22,2026022201,EFTPOS,Countdown,"Groceries",-71.40
+2026/02/24,2026022401,EFTPOS,Pharmacy,"Personal care",-27.60
+2026/02/26,2026022601,TFR IN,Student Allowance,"Weekly allowance",302.50
+2026/02/28,2026022801,EFTPOS,Uber Eats,"Takeaway dinner",-29.80
+2026/03/01,2026030101,EFTPOS,Warehouse Stationery,"Folders and paper",-18.20
+2026/03/03,2026030301,EFTPOS,New World,"Groceries",-88.35
+2026/03/05,2026030501,TFR IN,Part Time Wages,"Weekly wages",361.20
+2026/03/06,2026030601,EFTPOS,Auckland Transport,"AT HOP top up",-40.00
+2026/03/07,2026030701,A/P,Landlord,"Weekly rent",-230.00
+2026/03/08,2026030801,EFTPOS,Cityfitness,"Gym membership",-17.99
+2026/03/10,2026031001,EFTPOS,PB Tech,"Laptop stand",-44.90
+2026/03/12,2026031201,TFR IN,Scholarship Payment,"Course support payment",500.00
+2026/03/13,2026031301,EFTPOS,Countdown,"Groceries",-77.65
+2026/03/15,2026031501,EFTPOS,BurgerFuel,"Dinner",-23.40
+2026/03/17,2026031701,EFTPOS,Uniprint,"Printing credit",-10.00
+2026/03/19,2026031901,TFR IN,Student Allowance,"Weekly allowance",302.50
+2026/03/20,2026032001,EFTPOS,Z Energy,"Fuel",-49.70
+2026/03/21,2026032101,A/P,Landlord,"Weekly rent",-230.00
+2026/03/23,2026032301,EFTPOS,PAK'nSAVE,"Groceries",-102.35
+2026/03/25,2026032501,EFTPOS,Spotify,"Music subscription",-14.99
+2026/03/27,2026032701,EFTPOS,Event Cinemas,"Movie with friends",-22.00
+2026/03/29,2026032901,TFR IN,Part Time Wages,"Weekly wages",347.65
+2026/03/30,2026033001,EFTPOS,Pharmacy,"Shampoo and skincare",-31.45
+2026/04/01,2026040101,EFTPOS,Auckland Transport,"AT HOP top up",-30.00
+2026/04/02,2026040201,EFTPOS,Countdown,"Groceries",-84.25
+2026/04/04,2026040401,A/P,Landlord,"Weekly rent",-230.00
+2026/04/05,2026040501,TFR IN,Student Allowance,"Weekly allowance",302.50
+2026/04/06,2026040601,EFTPOS,Cityfitness,"Gym membership",-17.99
+2026/04/08,2026040801,EFTPOS,Noel Leeming,"Mouse replacement",-39.00
+2026/04/10,2026041001,EFTPOS,Subway,"Lunch",-13.90
+2026/04/12,2026041201,EFTPOS,PAK'nSAVE,"Groceries",-94.75
+2026/04/14,2026041401,TFR IN,Part Time Wages,"Weekly wages",372.10
+2026/04/15,2026041501,EFTPOS,Warehouse Stationery,"Highlighters",-9.80
+2026/04/17,2026041701,EFTPOS,Auckland Transport,"AT HOP top up",-25.00
+2026/04/18,2026041801,A/P,Landlord,"Weekly rent",-230.00
+2026/04/20,2026042001,EFTPOS,Netflix,"Streaming subscription",-18.99
+2026/04/21,2026042101,EFTPOS,Countdown,"Groceries",-79.30
+2026/04/23,2026042301,TFR IN,Student Allowance,"Weekly allowance",302.50
+2026/04/24,2026042401,EFTPOS,Kmart,"Clothing",-42.00
+2026/04/26,2026042601,EFTPOS,Uber Eats,"Takeaway",-26.40
+2026/04/28,2026042801,EFTPOS,Pharmacy,"Personal care",-22.95
+2026/04/30,2026043001,TFR IN,Part Time Wages,"Weekly wages",339.90
+2026/05/01,2026050101,EFTPOS,Auckland Transport,"AT HOP top up",-30.00
+2026/05/02,2026050201,A/P,Landlord,"Weekly rent",-230.00
+2026/05/03,2026050301,EFTPOS,New World,"Groceries",-86.15
+2026/05/04,2026050401,EFTPOS,Cityfitness,"Gym membership",-17.99
+2026/05/05,2026050501,TFR IN,Student Allowance,"Weekly allowance",302.50
+2026/05/06,2026050601,EFTPOS,PB Tech,"Keyboard",-59.00
+2026/05/08,2026050801,EFTPOS,Sushi Pac,"Lunch",-15.90
+2026/05/10,2026051001,EFTPOS,Countdown,"Groceries",-73.85
+2026/05/12,2026051201,TFR IN,Part Time Wages,"Weekly wages",356.30
+2026/05/13,2026051301,EFTPOS,Spotify,"Music subscription",-14.99
+2026/05/15,2026051501,EFTPOS,Auckland Transport,"AT HOP top up",-25.00
+2026/05/16,2026051601,A/P,Landlord,"Weekly rent",-230.00
+2026/05/17,2026051701,EFTPOS,Dominos,"Pizza",-22.50
+2026/05/19,2026051901,EFTPOS,PAK'nSAVE,"Groceries",-98.45
+2026/05/20,2026052001,TFR IN,Student Allowance,"Weekly allowance",302.50
+2026/05/21,2026052101,EFTPOS,Uniprint,"Printing credit",-6.00
+2026/05/23,2026052301,EFTPOS,Z Energy,"Fuel",-51.20
+2026/05/24,2026052401,EFTPOS,Warehouse Stationery,"Study supplies",-16.75
+2026/05/26,2026052601,TFR IN,Part Time Wages,"Weekly wages",365.80
+2026/05/27,2026052701,EFTPOS,Countdown,"Groceries",-81.90
+2026/05/28,2026052801,EFTPOS,Hoyts,"Movie ticket",-20.00
+2026/05/30,2026053001,A/P,Landlord,"Weekly rent",-230.00
+2026/05/31,2026053101,EFTPOS,Pharmacy,"Toiletries",-24.35

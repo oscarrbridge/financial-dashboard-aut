@@ -1,15 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import CsvUpload from "../../components/csvUpload";
+import { requireAuth } from "@/lib/firebase/requireAuth";
+import { autoCategorizeTransaction } from "@/lib/firebase/transactions";
+
+import {
+  addTransactionToFirestore,
+  addTransactionsBatchToFirestore,
+  getUserTransactions,
+  updateTransactionInFirestore,
+  deleteTransactionFromFirestore,
+} from "@/lib/firebase/transactions";
+
+
 
 type TransactionType = "Expense" | "Income" | "Debt";
 
 type Transaction = {
+  id?: string;
   description: string;
   amount: number;
   category: string;
   date: string;
   type: TransactionType;
+  source?: "manual" | "csv";
 };
 
 const categoryOptions: Record<TransactionType, string[]> = {
@@ -21,12 +36,18 @@ const categoryOptions: Record<TransactionType, string[]> = {
     "Entertainment",
     "Education",
     "Personal Care",
+    "Food & Dining",
+    "Other Expense"
   ],
-  Income: ["Wages", "Scholarship", "Student Allowance", "Family Support"],
-  Debt: ["Student Loan", "Credit Card", "Personal Loan"],
+  Income: ["Wages", "Scholarship", "Student Allowance", "Family Support", "Other Income"],
+  Debt: ["Student Loan", "Credit Card", "Personal Loan", "Other Debt"],
 };
 
 export default function TransactionsPage() {
+
+  const { user, loading } = requireAuth();
+
+
   const [showPopup, setShowPopup] = useState(false);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
 
@@ -48,36 +69,7 @@ export default function TransactionsPage() {
   const [category, setCategory] = useState("");
   const [transactionDate, setTransactionDate] = useState("");
 
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    {
-      description: "Mc Donalds",
-      amount: 17.8,
-      category: "Groceries",
-      date: "2028-04-22",
-      type: "Expense",
-    },
-    {
-      description: "Income",
-      amount: 382.44,
-      category: "Wages",
-      date: "2028-04-21",
-      type: "Income",
-    },
-    {
-      description: "Student Loan",
-      amount: 1200,
-      category: "Student Loan",
-      date: "2028-04-20",
-      type: "Debt",
-    },
-    {
-      description: "Spotify",
-      amount: 6.99,
-      category: "Entertainment",
-      date: "2028-04-19",
-      type: "Expense",
-    },
-  ]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const filteredTransactions =
     filterDate === ""
@@ -101,23 +93,42 @@ export default function TransactionsPage() {
     setEditingIndex(null);
   };
 
-  const addTransaction = () => {
-    if (description === "" || amount === "" || transactionDate === "") {
-      return;
-    }
+  const addTransaction = async () => {
+  if (description === "" || amount === "" || transactionDate === "") {
+    return;
+  }
 
-    const newTransaction: Transaction = {
-      description,
-      amount: Number(amount),
-      category: category === "" ? "Auto" : category,
-      date: transactionDate,
-      type: transactionType,
-    };
+  if (!user) {
+    return;
+  }
 
-    setTransactions([newTransaction, ...transactions]);
-    resetForm();
-    setCurrentPage(1);
-    setShowPopup(false);
+  const selectedCategory =
+  category === ""
+    ? autoCategorizeTransaction(description, transactionType)
+    : category;
+
+  const newTransaction: Transaction = {
+    description,
+    amount: Number(amount),
+    category: selectedCategory,
+    date: transactionDate,
+    type: transactionType,
+    source: "manual",
+  };
+
+  const newTransactionId = await addTransactionToFirestore(
+    user.uid,
+    newTransaction
+  );
+
+  setTransactions((currentTransactions) => [
+    { ...newTransaction, id: newTransactionId },
+    ...currentTransactions,
+  ]);
+
+  resetForm();
+  setCurrentPage(1);
+  setShowPopup(false);
   };
 
   const handleEditClick = () => {
@@ -140,7 +151,7 @@ export default function TransactionsPage() {
     setShowPopup(true);
   };
 
-  const confirmEditTransaction = () => {
+  const confirmEditTransaction = async () => {
     if (
       editingIndex === null ||
       description === "" ||
@@ -150,17 +161,40 @@ export default function TransactionsPage() {
       return;
     }
 
+    if (!user) {
+      return;
+    }
+
+    const transactionToEdit = transactions[editingIndex];
+
+    if (!transactionToEdit.id) {
+      return;
+    }
+
+    const selectedCategory =
+      category === ""
+        ? autoCategorizeTransaction(description, transactionType)
+        : category;
+
     const updatedTransaction: Transaction = {
+      id: transactionToEdit.id,
       description,
       amount: Number(amount),
-      category: category === "" ? "Auto" : category,
+      category: selectedCategory,
       date: transactionDate,
       type: transactionType,
+      source: transactionToEdit.source,
     };
 
-    setTransactions(
-      transactions.map((transaction, index) =>
-        index === editingIndex ? updatedTransaction : transaction
+    await updateTransactionInFirestore(
+      user.uid,
+      transactionToEdit.id,
+      updatedTransaction
+    );
+
+    setTransactions((currentTransactions) =>
+      currentTransactions.map((transaction) =>
+        transaction.id === transactionToEdit.id ? updatedTransaction : transaction
       )
     );
 
@@ -211,7 +245,7 @@ export default function TransactionsPage() {
     }
   };
 
-  const handleDeleteClick = () => {
+  const handleDeleteClick = async () => {
     if (!deleteMode) {
       setDeleteMode(true);
       setEditMode(false);
@@ -224,8 +258,26 @@ export default function TransactionsPage() {
       return;
     }
 
-    setTransactions(
-      transactions.filter((_, index) => !selectedTransactions.includes(index))
+    if (!user) {
+      return;
+    }
+
+    const transactionsToDelete = selectedTransactions
+      .map((index) => transactions[index])
+      .filter((transaction) => transaction?.id);
+
+    for (const transaction of transactionsToDelete) {
+      await deleteTransactionFromFirestore(user.uid, transaction.id!);
+    }
+
+    const deletedIds = transactionsToDelete.map(
+      (transaction) => transaction.id
+    );
+
+    setTransactions((currentTransactions) =>
+      currentTransactions.filter(
+        (transaction) => !deletedIds.includes(transaction.id)
+      )
     );
 
     setSelectedTransactions([]);
@@ -240,6 +292,59 @@ export default function TransactionsPage() {
   const totalExpenses = transactions
     .filter((transaction) => transaction.type === "Expense")
     .reduce((total, transaction) => total + transaction.amount, 0);
+
+  
+  const handleConfirmCsvImport = async (
+    importedTransactions: {
+      date: string;
+      type: TransactionType;
+      source: string;
+      description: string;
+      amount: number;
+    }[]
+  ) => {
+    if (!user) {
+      return;
+    }
+
+    const convertedTransactions: Transaction[] = importedTransactions.map(
+      (transaction) => ({
+        description: transaction.description,
+        amount: Math.abs(transaction.amount),
+        category: transaction.source,
+        date: transaction.date,
+        type: transaction.type,
+        source: "csv",
+      })
+    );
+
+    await addTransactionsBatchToFirestore(user.uid, convertedTransactions);
+
+    const savedTransactions = await getUserTransactions(user.uid);
+    setTransactions(savedTransactions);
+    setCurrentPage(1);
+  };
+
+  useEffect(() => {
+    async function loadTransactions() {
+      if (!user) return;
+
+      const savedTransactions = await getUserTransactions(user.uid);
+      setTransactions(savedTransactions);
+    }
+
+    loadTransactions();
+  }, [user]);
+
+  if (loading) {
+    return <p className="text-white">Loading...</p>;
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
@@ -492,6 +597,12 @@ export default function TransactionsPage() {
             <h2 className="text-3xl font-bold mb-4">
               {editingIndex === null ? "New Transaction" : "Edit Transaction"}
             </h2>
+
+            {editingIndex === null && (
+              <div className="mb-4 border border-zinc-700 rounded-lg p-3">
+                <CsvUpload onConfirmImport={handleConfirmCsvImport} />
+              </div>
+            )}
 
             <div className="flex gap-2 mb-4">
               {(["Expense", "Income", "Debt"] as TransactionType[]).map(
