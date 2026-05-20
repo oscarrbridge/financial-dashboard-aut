@@ -73,6 +73,7 @@ export default function TransactionsPage() {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [transactionDate, setTransactionDate] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
@@ -91,6 +92,34 @@ export default function TransactionsPage() {
     setCurrentPage(1);
   };
 
+  const normalizeCsvDate = (dateValue: string) => {
+    if (!dateValue) {
+      return "";
+    }
+
+    const trimmedDate = dateValue.trim();
+
+    // Already YYYY-MM-DD
+    if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(trimmedDate)) {
+      return trimmedDate;
+    }
+
+    // Handle DD/MM/YYYY and DD-MM-YYYY
+    const dateParts = trimmedDate.includes("/")
+      ? trimmedDate.split("/")
+      : trimmedDate.split("-");
+
+    if (dateParts.length === 3) {
+      const day = dateParts[0].padStart(2, "0");
+      const month = dateParts[1].padStart(2, "0");
+      const year = dateParts[2];
+
+      return `${year}-${month}-${day}`;
+    }
+
+    return trimmedDate;
+  };
+
   const setMonthRangeFilter = (monthsAgo: number) => {
     const today = new Date();
     const pastDate = new Date();
@@ -102,34 +131,34 @@ export default function TransactionsPage() {
     setCurrentPage(1);
   };
 
-const filteredTransactionsWithIndex = transactions
-  .map((transaction, originalIndex) => ({
-    transaction,
-    originalIndex,
-  }))
-  .filter(({ transaction }) => {
-    const searchValue = searchText.toLowerCase();
+  const filteredTransactionsWithIndex = transactions
+    .map((transaction, originalIndex) => ({
+      transaction,
+      originalIndex,
+    }))
+    .filter(({ transaction }) => {
+      const searchValue = searchText.toLowerCase();
 
-    const matchesSearch =
-      transaction.description.toLowerCase().includes(searchValue) ||
-      transaction.category.toLowerCase().includes(searchValue) ||
-      transaction.type.toLowerCase().includes(searchValue) ||
-      transaction.date.includes(searchValue);
+      const matchesSearch = transaction.description
+        .toLowerCase()
+        .includes(searchValue);
 
-    if (searchText !== "" && !matchesSearch) {
-      return false;
-    }
+      if (searchText !== "" && !matchesSearch) {
+        return false;
+      }
 
-    if (startDate !== "" && transaction.date < startDate) {
-      return false;
-    }
+      const normalizedTransactionDate = normalizeCsvDate(transaction.date);
 
-    if (endDate !== "" && transaction.date > endDate) {
-      return false;
-    }
+      if (startDate !== "" && normalizedTransactionDate < startDate) {
+        return false;
+      }
 
-    return true;
-  });
+      if (endDate !== "" && normalizedTransactionDate > endDate) {
+        return false;
+      }
+
+      return true;
+    });
 
   const totalPages = Math.ceil(
     filteredTransactionsWithIndex.length / transactionsPerPage
@@ -152,13 +181,28 @@ const filteredTransactionsWithIndex = transactions
   };
 
   const addTransaction = async () => {
-    if (description === "" || amount === "" || transactionDate === "") {
+    if (description.trim() === "") {
+      setErrorMessage("Please enter a description.");
       return;
     }
 
-    if (!user) {
+    if (amount === "") {
+      setErrorMessage("Please enter an amount.");
       return;
     }
+
+    if (Number(amount) <= 0) {
+      setErrorMessage("Amount must be greater than 0.");
+      return;
+    }
+
+    if (transactionDate === "") {
+      setErrorMessage("Please select a transaction date.");
+      return;
+    }
+
+    setErrorMessage("");
+
 
     const selectedCategory =
       category === ""
@@ -175,9 +219,9 @@ const filteredTransactionsWithIndex = transactions
     };
 
     const newTransactionId = await addTransactionToFirestore(
-      user.uid,
+      user!.uid,
       newTransaction
-    );  
+    );
 
 
 
@@ -323,12 +367,12 @@ const filteredTransactionsWithIndex = transactions
     }
 
     const confirmed = window.confirm(
-  `Delete ${selectedTransactions.length} transaction(s)?`
-      );
+      `Delete ${selectedTransactions.length} transaction(s)?`
+    );
 
-      if (!confirmed) {
-        return;
-      }
+    if (!confirmed) {
+      return;
+    }
 
     const transactionsToDelete = selectedTransactions
       .map((index) => transactions[index])
@@ -435,33 +479,35 @@ const filteredTransactionsWithIndex = transactions
       <div className="bg-zinc-900 rounded-lg p-3">
         <div className="flex gap-2 mb-3">
           <input
-              placeholder="Search Transactions"
-              value={searchText}
-              onChange={(event) => {
+            placeholder="Search Transactions"
+            value={searchText}
+            onChange={(event) => {
               setSearchText(event.target.value);
               setCurrentPage(1);
-              
+
             }}
-            
+
             className="flex-1 bg-zinc-900 border border-zinc-600 rounded-lg px-4 py-2 text-white"
-/>
+          />
+
+
 
           <button
             onClick={handleEditClick}
             title="Edit"
-            className={`px-4 py-2 rounded-lg ${
-              editMode ? "bg-blue-600 text-white" : "bg-white text-black"
-            }`}
+            className={`px-4 py-2 rounded-lg ${editMode ? "bg-blue-600 text-white" : "bg-white text-black"
+              }`}
           >
             <Pencil size={18} />
           </button>
 
+
+
           <button
             onClick={handleDeleteClick}
             title="Delete"
-            className={`px-4 py-2 rounded-lg ${
-              deleteMode ? "bg-red-600 text-white" : "bg-white text-black"
-            }`}
+            className={`px-4 py-2 rounded-lg ${deleteMode ? "bg-red-600 text-white" : "bg-white text-black"
+              }`}
           >
             <Trash2 size={18} />
           </button>
@@ -469,14 +515,14 @@ const filteredTransactionsWithIndex = transactions
           <button
             onClick={() => {
               if (startDate !== "" || endDate !== "") {
-                  setStartDate("");
-                  setEndDate("");
-                  setCurrentPage(1);
-                  return;
-                }
+                setStartDate("");
+                setEndDate("");
+                setCurrentPage(1);
+                return;
+              }
 
-  setShowFilterPopup(true);
-}}
+              setShowFilterPopup(true);
+            }}
             title="Filter"
             className="bg-white text-black px-4 py-2 rounded-lg"
           >
@@ -497,9 +543,8 @@ const filteredTransactionsWithIndex = transactions
 
         {(startDate !== "" || endDate !== "") && (
           <p className="text-sm text-zinc-400 mb-3">
-            {`Showing transactions from ${startDate || "the beginning"} to ${
-              endDate || "today"
-            }`}
+            {`Showing transactions from ${startDate || "the beginning"} to ${endDate || "today"
+              }`}
           </p>
         )}
 
@@ -534,9 +579,8 @@ const filteredTransactionsWithIndex = transactions
               <div
                 key={transaction.id || originalIndex}
                 onClick={() => openEditPopup(originalIndex)}
-                className={`bg-zinc-900 rounded-lg p-4 flex items-center mb-2 ${
-                  editMode ? "cursor-pointer border border-blue-500" : ""
-                }`}
+                className={`bg-zinc-900 rounded-lg p-4 flex items-center mb-2 ${editMode ? "cursor-pointer border border-blue-500" : ""
+                  }`}
               >
                 {deleteMode && (
                   <input
@@ -555,25 +599,23 @@ const filteredTransactionsWithIndex = transactions
                 </div>
 
                 <span
-                  className={`border rounded-full px-4 py-1 text-xs ${
-                    transaction.type === "Income"
+                  className={`border rounded-full px-4 py-1 text-xs ${transaction.type === "Income"
                       ? "text-green-400 border-green-500"
                       : transaction.type === "Debt"
-                      ? "text-yellow-400 border-yellow-500"
-                      : "text-red-400 border-red-500"
-                  }`}
+                        ? "text-yellow-400 border-yellow-500"
+                        : "text-red-400 border-red-500"
+                    }`}
                 >
                   {transaction.category}
                 </span>
 
                 <p
-                  className={`text-xs w-32 text-right ${
-                    transaction.type === "Income"
+                  className={`text-xs w-32 text-right ${transaction.type === "Income"
                       ? "text-green-400"
                       : transaction.type === "Debt"
-                      ? "text-yellow-400"
-                      : "text-red-400"
-                  }`}
+                        ? "text-yellow-400"
+                        : "text-red-400"
+                    }`}
                 >
                   {transaction.type === "Income" ? "+" : "-"}NZ$
                   {transaction.amount.toFixed(2)}
@@ -598,11 +640,10 @@ const filteredTransactionsWithIndex = transactions
                 <button
                   key={pageNumber}
                   onClick={() => setCurrentPage(pageNumber)}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === pageNumber
+                  className={`px-3 py-1 rounded ${currentPage === pageNumber
                       ? "bg-white text-black"
                       : "bg-zinc-700 text-white"
-                  }`}
+                    }`}
                 >
                   {pageNumber}
                 </button>
@@ -683,6 +724,8 @@ const filteredTransactionsWithIndex = transactions
               </button>
             </div>
 
+
+
             <div className="flex gap-2">
               <button
                 onClick={() => {
@@ -727,11 +770,10 @@ const filteredTransactionsWithIndex = transactions
                       setTransactionType(type);
                       setCategory("");
                     }}
-                    className={`px-4 py-2 rounded-lg font-bold ${
-                      transactionType === type
+                    className={`px-4 py-2 rounded-lg font-bold ${transactionType === type
                         ? "bg-white text-black"
                         : "bg-zinc-800 text-white"
-                    }`}
+                      }`}
                   >
                     {type}
                   </button>
@@ -782,6 +824,12 @@ const filteredTransactionsWithIndex = transactions
               onChange={(event) => setTransactionDate(event.target.value)}
               className="w-full mb-5 p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white"
             />
+
+            {errorMessage !== "" && (
+              <p className="text-red-400 text-sm mb-3">
+                {errorMessage}
+              </p>
+            )}
 
             <div className="flex gap-2">
               <button
