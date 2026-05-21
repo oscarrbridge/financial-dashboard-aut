@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Pencil, Trash2, Filter } from "lucide-react";
 import CsvUpload from "../../components/csvUpload";
 import { requireAuth } from "@/lib/firebase/requireAuth";
 import { autoCategorizeTransaction } from "@/lib/firebase/transactions";
@@ -12,8 +13,6 @@ import {
   updateTransactionInFirestore,
   deleteTransactionFromFirestore,
 } from "@/lib/firebase/transactions";
-
-
 
 type TransactionType = "Expense" | "Income" | "Debt";
 
@@ -37,16 +36,20 @@ const categoryOptions: Record<TransactionType, string[]> = {
     "Education",
     "Personal Care",
     "Food & Dining",
-    "Other Expense"
+    "Other Expense",
   ],
-  Income: ["Wages", "Scholarship", "Student Allowance", "Family Support", "Other Income"],
+  Income: [
+    "Wages",
+    "Scholarship",
+    "Student Allowance",
+    "Family Support",
+    "Other Income",
+  ],
   Debt: ["Student Loan", "Credit Card", "Personal Loan", "Other Debt"],
 };
 
 export default function TransactionsPage() {
-
   const { user, loading } = requireAuth();
-
 
   const [showPopup, setShowPopup] = useState(false);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
@@ -56,7 +59,9 @@ export default function TransactionsPage() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const [selectedTransactions, setSelectedTransactions] = useState<number[]>([]);
-  const [filterDate, setFilterDate] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const transactionsPerPage = 20;
@@ -68,21 +73,103 @@ export default function TransactionsPage() {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [transactionDate, setTransactionDate] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  const filteredTransactions =
-    filterDate === ""
-      ? transactions
-      : transactions.filter((transaction) => transaction.date === filterDate);
+  const formatDate = (date: Date) => {
+    return date.toISOString().split("T")[0];
+  };
+
+  const setLastWeekFilter = () => {
+    const today = new Date();
+    const lastWeek = new Date();
+
+    lastWeek.setDate(today.getDate() - 7);
+
+    setStartDate(formatDate(lastWeek));
+    setEndDate(formatDate(today));
+    setCurrentPage(1);
+  };
+
+  const normalizeCsvDate = (dateValue: string) => {
+    if (!dateValue) {
+      return "";
+    }
+
+    const trimmedDate = dateValue.trim();
+
+    // Already YYYY-MM-DD
+    if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(trimmedDate)) {
+      return trimmedDate;
+    }
+
+    // Handle DD/MM/YYYY and DD-MM-YYYY
+    const dateParts = trimmedDate.includes("/")
+      ? trimmedDate.split("/")
+      : trimmedDate.split("-");
+
+    if (dateParts.length === 3) {
+      const day = dateParts[0].padStart(2, "0");
+      const month = dateParts[1].padStart(2, "0");
+      const year = dateParts[2];
+
+      return `${year}-${month}-${day}`;
+    }
+
+    return trimmedDate;
+  };
+
+  const setMonthRangeFilter = (monthsAgo: number) => {
+    const today = new Date();
+    const pastDate = new Date();
+
+    pastDate.setMonth(today.getMonth() - monthsAgo);
+
+    setStartDate(formatDate(pastDate));
+    setEndDate(formatDate(today));
+    setCurrentPage(1);
+  };
+
+  const filteredTransactionsWithIndex = transactions
+    .map((transaction, originalIndex) => ({
+      transaction,
+      originalIndex,
+    }))
+    .filter(({ transaction }) => {
+      const searchValue = searchText.toLowerCase();
+
+      const matchesSearch = transaction.description
+        .toLowerCase()
+        .includes(searchValue);
+
+      if (searchText !== "" && !matchesSearch) {
+        return false;
+      }
+
+      const normalizedTransactionDate = normalizeCsvDate(transaction.date);
+
+      if (startDate !== "" && normalizedTransactionDate < startDate) {
+        return false;
+      }
+
+      if (endDate !== "" && normalizedTransactionDate > endDate) {
+        return false;
+      }
+
+      return true;
+    });
 
   const totalPages = Math.ceil(
-    filteredTransactions.length / transactionsPerPage
+    filteredTransactionsWithIndex.length / transactionsPerPage
   );
 
   const startIndex = (currentPage - 1) * transactionsPerPage;
   const endIndex = startIndex + transactionsPerPage;
-  const currentTransactions = filteredTransactions.slice(startIndex, endIndex);
+  const currentTransactions = filteredTransactionsWithIndex.slice(
+    startIndex,
+    endIndex
+  );
 
   const resetForm = () => {
     setDescription("");
@@ -94,41 +181,58 @@ export default function TransactionsPage() {
   };
 
   const addTransaction = async () => {
-  if (description === "" || amount === "" || transactionDate === "") {
-    return;
-  }
+    if (description.trim() === "") {
+      setErrorMessage("Please enter a description.");
+      return;
+    }
 
-  if (!user) {
-    return;
-  }
+    if (amount === "") {
+      setErrorMessage("Please enter an amount.");
+      return;
+    }
 
-  const selectedCategory =
-  category === ""
-    ? autoCategorizeTransaction(description, transactionType)
-    : category;
+    if (Number(amount) <= 0) {
+      setErrorMessage("Amount must be greater than 0.");
+      return;
+    }
 
-  const newTransaction: Transaction = {
-    description,
-    amount: Number(amount),
-    category: selectedCategory,
-    date: transactionDate,
-    type: transactionType,
-    source: "manual",
-  };
+    if (transactionDate === "") {
+      setErrorMessage("Please select a transaction date.");
+      return;
+    }
 
-  const newTransactionId = await addTransactionToFirestore(
-    user.uid,
-    newTransaction
-  );
+    setErrorMessage("");
 
-  setTransactions((currentTransactions) => [
-    { ...newTransaction, id: newTransactionId },
-    ...currentTransactions,
-  ]);
 
-  resetForm();
-  setCurrentPage(1);
-  setShowPopup(false);
+    const selectedCategory =
+      category === ""
+        ? autoCategorizeTransaction(description, transactionType)
+        : category;
+
+    const newTransaction: Transaction = {
+      description,
+      amount: Number(amount),
+      category: selectedCategory,
+      date: transactionDate,
+      type: transactionType,
+      source: "manual",
+    };
+
+    const newTransactionId = await addTransactionToFirestore(
+      user!.uid,
+      newTransaction
+    );
+
+
+
+    setTransactions((currentTransactions) => [
+      { ...newTransaction, id: newTransactionId },
+      ...currentTransactions,
+    ]);
+
+    resetForm();
+    setCurrentPage(1);
+    setShowPopup(false);
   };
 
   const handleEditClick = () => {
@@ -222,7 +326,7 @@ export default function TransactionsPage() {
 
   const toggleSelectAll = () => {
     const currentPageIndexes = currentTransactions.map(
-      (_, index) => startIndex + index
+      ({ originalIndex }) => originalIndex
     );
 
     const allCurrentSelected = currentPageIndexes.every((index) =>
@@ -262,6 +366,14 @@ export default function TransactionsPage() {
       return;
     }
 
+    const confirmed = window.confirm(
+      `Delete ${selectedTransactions.length} transaction(s)?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     const transactionsToDelete = selectedTransactions
       .map((index) => transactions[index])
       .filter((transaction) => transaction?.id);
@@ -293,7 +405,6 @@ export default function TransactionsPage() {
     .filter((transaction) => transaction.type === "Expense")
     .reduce((total, transaction) => total + transaction.amount, 0);
 
-  
   const handleConfirmCsvImport = async (
     importedTransactions: {
       date: string;
@@ -312,7 +423,7 @@ export default function TransactionsPage() {
         description: transaction.description,
         amount: Math.abs(transaction.amount),
         category: transaction.source,
-        date: transaction.date,
+        date: normalizeCsvDate(transaction.date),
         type: transaction.type,
         source: "csv",
       })
@@ -344,8 +455,6 @@ export default function TransactionsPage() {
     return null;
   }
 
-  
-
   return (
     <div className="min-h-screen bg-black text-white p-8">
       <h1 className="text-2xl mb-10">Welcome back &lt;user&gt;</h1>
@@ -371,32 +480,53 @@ export default function TransactionsPage() {
         <div className="flex gap-2 mb-3">
           <input
             placeholder="Search Transactions"
+            value={searchText}
+            onChange={(event) => {
+              setSearchText(event.target.value);
+              setCurrentPage(1);
+
+            }}
+
             className="flex-1 bg-zinc-900 border border-zinc-600 rounded-lg px-4 py-2 text-white"
           />
 
+
+
           <button
             onClick={handleEditClick}
-            className={`px-4 py-2 rounded-lg ${
-              editMode ? "bg-blue-600 text-white" : "bg-white text-black"
-            }`}
+            title="Edit"
+            className={`px-4 py-2 rounded-lg ${editMode ? "bg-blue-600 text-white" : "bg-white text-black"
+              }`}
           >
-            Edit
+            <Pencil size={18} />
           </button>
+
+
 
           <button
             onClick={handleDeleteClick}
-            className={`px-4 py-2 rounded-lg ${
-              deleteMode ? "bg-red-600 text-white" : "bg-white text-black"
-            }`}
+            title="Delete"
+            className={`px-4 py-2 rounded-lg ${deleteMode ? "bg-red-600 text-white" : "bg-white text-black"
+              }`}
           >
-            🗑 Delete
+            <Trash2 size={18} />
           </button>
 
           <button
-            onClick={() => setShowFilterPopup(true)}
+            onClick={() => {
+              if (startDate !== "" || endDate !== "") {
+                setStartDate("");
+                setEndDate("");
+                setCurrentPage(1);
+                return;
+              }
+
+              setShowFilterPopup(true);
+            }}
+            title="Filter"
             className="bg-white text-black px-4 py-2 rounded-lg"
           >
-            Filter
+            <Filter size={18} />
           </button>
 
           <button
@@ -411,9 +541,10 @@ export default function TransactionsPage() {
           </button>
         </div>
 
-        {filterDate !== "" && (
+        {(startDate !== "" || endDate !== "") && (
           <p className="text-sm text-zinc-400 mb-3">
-            Showing transactions from: {filterDate}
+            {`Showing transactions from ${startDate || "the beginning"} to ${endDate || "today"
+              }`}
           </p>
         )}
 
@@ -429,8 +560,8 @@ export default function TransactionsPage() {
               type="checkbox"
               checked={
                 currentTransactions.length > 0 &&
-                currentTransactions.every((_, index) =>
-                  selectedTransactions.includes(startIndex + index)
+                currentTransactions.every(({ originalIndex }) =>
+                  selectedTransactions.includes(originalIndex)
                 )
               }
               onChange={toggleSelectAll}
@@ -443,24 +574,19 @@ export default function TransactionsPage() {
         )}
 
         <div className="bg-zinc-800 rounded-lg p-2">
-         
-
-          {currentTransactions.map((transaction, index) => {
-            const actualIndex = startIndex + index;
-
+          {currentTransactions.map(({ transaction, originalIndex }) => {
             return (
               <div
-                key={actualIndex}
-                onClick={() => openEditPopup(actualIndex)}
-                className={`bg-zinc-900 rounded-lg p-4 flex items-center mb-2 ${
-                  editMode ? "cursor-pointer border border-blue-500" : ""
-                }`}
+                key={transaction.id || originalIndex}
+                onClick={() => openEditPopup(originalIndex)}
+                className={`bg-zinc-900 rounded-lg p-4 flex items-center mb-2 ${editMode ? "cursor-pointer border border-blue-500" : ""
+                  }`}
               >
                 {deleteMode && (
                   <input
                     type="checkbox"
-                    checked={selectedTransactions.includes(actualIndex)}
-                    onChange={() => toggleSelectTransaction(actualIndex)}
+                    checked={selectedTransactions.includes(originalIndex)}
+                    onChange={() => toggleSelectTransaction(originalIndex)}
                     className="mr-3"
                   />
                 )}
@@ -473,25 +599,23 @@ export default function TransactionsPage() {
                 </div>
 
                 <span
-                  className={`border rounded-full px-4 py-1 text-xs ${
-                    transaction.type === "Income"
+                  className={`border rounded-full px-4 py-1 text-xs ${transaction.type === "Income"
                       ? "text-green-400 border-green-500"
                       : transaction.type === "Debt"
-                      ? "text-yellow-400 border-yellow-500"
-                      : "text-red-400 border-red-500"
-                  }`}
+                        ? "text-yellow-400 border-yellow-500"
+                        : "text-red-400 border-red-500"
+                    }`}
                 >
                   {transaction.category}
                 </span>
 
                 <p
-                  className={`text-xs w-32 text-right ${
-                    transaction.type === "Income"
+                  className={`text-xs w-32 text-right ${transaction.type === "Income"
                       ? "text-green-400"
                       : transaction.type === "Debt"
-                      ? "text-yellow-400"
-                      : "text-red-400"
-                  }`}
+                        ? "text-yellow-400"
+                        : "text-red-400"
+                    }`}
                 >
                   {transaction.type === "Income" ? "+" : "-"}NZ$
                   {transaction.amount.toFixed(2)}
@@ -516,11 +640,10 @@ export default function TransactionsPage() {
                 <button
                   key={pageNumber}
                   onClick={() => setCurrentPage(pageNumber)}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === pageNumber
+                  className={`px-3 py-1 rounded ${currentPage === pageNumber
                       ? "bg-white text-black"
                       : "bg-zinc-700 text-white"
-                  }`}
+                    }`}
                 >
                   {pageNumber}
                 </button>
@@ -540,7 +663,7 @@ export default function TransactionsPage() {
 
       {showFilterPopup && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="relative bg-zinc-950 border border-zinc-700 rounded-xl p-6 w-[360px] text-white">
+          <div className="relative bg-zinc-950 border border-zinc-700 rounded-xl p-6 w-[420px] text-white">
             <button
               onClick={() => setShowFilterPopup(false)}
               className="absolute right-4 top-4 bg-white text-black px-3 py-1 rounded-lg font-bold"
@@ -550,26 +673,60 @@ export default function TransactionsPage() {
 
             <h2 className="text-2xl font-bold mb-4">Filter by Date</h2>
 
-            <label className="block mb-1">Select Date</label>
-            <input
-              type="date"
-              value={filterDate}
-              onChange={(event) => setFilterDate(event.target.value)}
-              className="w-full mb-5 p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white"
-            />
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label className="block mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => {
+                    setStartDate(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white"
+                />
+              </div>
 
-            <div className="flex gap-2">
+              <div>
+                <label className="block mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(event) => {
+                    setEndDate(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 mb-5">
               <button
-                onClick={() => {
-                  setFilterDate("");
-                  setCurrentPage(1);
-                  setShowFilterPopup(false);
-                }}
-                className="w-full bg-zinc-700 text-white py-3 rounded-lg font-bold"
+                onClick={setLastWeekFilter}
+                className="bg-zinc-800 text-white py-2 rounded-lg text-sm"
               >
-                Clear
+                Last Week
               </button>
 
+              <button
+                onClick={() => setMonthRangeFilter(1)}
+                className="bg-zinc-800 text-white py-2 rounded-lg text-sm"
+              >
+                Last Month
+              </button>
+
+              <button
+                onClick={() => setMonthRangeFilter(6)}
+                className="bg-zinc-800 text-white py-2 rounded-lg text-sm"
+              >
+                Last 6 Months
+              </button>
+            </div>
+
+
+
+            <div className="flex gap-2">
               <button
                 onClick={() => {
                   setCurrentPage(1);
@@ -613,11 +770,10 @@ export default function TransactionsPage() {
                       setTransactionType(type);
                       setCategory("");
                     }}
-                    className={`px-4 py-2 rounded-lg font-bold ${
-                      transactionType === type
+                    className={`px-4 py-2 rounded-lg font-bold ${transactionType === type
                         ? "bg-white text-black"
                         : "bg-zinc-800 text-white"
-                    }`}
+                      }`}
                   >
                     {type}
                   </button>
@@ -668,6 +824,12 @@ export default function TransactionsPage() {
               onChange={(event) => setTransactionDate(event.target.value)}
               className="w-full mb-5 p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white"
             />
+
+            {errorMessage !== "" && (
+              <p className="text-red-400 text-sm mb-3">
+                {errorMessage}
+              </p>
+            )}
 
             <div className="flex gap-2">
               <button
