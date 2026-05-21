@@ -423,7 +423,7 @@ export default function TransactionsPage() {
         description: transaction.description,
         amount: Math.abs(transaction.amount),
         category: transaction.source,
-        date: transaction.date,
+        date: normalizeCsvDate(transaction.date),
         type: transaction.type,
         source: "csv",
       })
