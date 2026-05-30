@@ -5,6 +5,10 @@ import { Pencil, Trash2, Filter } from "lucide-react";
 import CsvUpload from "../../components/csvUpload";
 import { requireAuth } from "@/lib/firebase/requireAuth";
 import { autoCategorizeTransaction } from "@/lib/firebase/transactions";
+import {
+  matchesTransactionFilter,
+  normalizeCsvDate,
+} from "@/lib/transactions/filterTransactions";
 
 import {
   addTransactionToFirestore,
@@ -92,34 +96,6 @@ export default function TransactionsPage() {
     setCurrentPage(1);
   };
 
-  const normalizeCsvDate = (dateValue: string) => {
-    if (!dateValue) {
-      return "";
-    }
-
-    const trimmedDate = dateValue.trim();
-
-    // Already YYYY-MM-DD
-    if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(trimmedDate)) {
-      return trimmedDate;
-    }
-
-    // Handle DD/MM/YYYY and DD-MM-YYYY
-    const dateParts = trimmedDate.includes("/")
-      ? trimmedDate.split("/")
-      : trimmedDate.split("-");
-
-    if (dateParts.length === 3) {
-      const day = dateParts[0].padStart(2, "0");
-      const month = dateParts[1].padStart(2, "0");
-      const year = dateParts[2];
-
-      return `${year}-${month}-${day}`;
-    }
-
-    return trimmedDate;
-  };
-
   const setMonthRangeFilter = (monthsAgo: number) => {
     const today = new Date();
     const pastDate = new Date();
@@ -131,34 +107,16 @@ export default function TransactionsPage() {
     setCurrentPage(1);
   };
 
+  const filterCriteria = { searchText, startDate, endDate };
+
   const filteredTransactionsWithIndex = transactions
     .map((transaction, originalIndex) => ({
       transaction,
       originalIndex,
     }))
-    .filter(({ transaction }) => {
-      const searchValue = searchText.toLowerCase();
-
-      const matchesSearch = transaction.description
-        .toLowerCase()
-        .includes(searchValue);
-
-      if (searchText !== "" && !matchesSearch) {
-        return false;
-      }
-
-      const normalizedTransactionDate = normalizeCsvDate(transaction.date);
-
-      if (startDate !== "" && normalizedTransactionDate < startDate) {
-        return false;
-      }
-
-      if (endDate !== "" && normalizedTransactionDate > endDate) {
-        return false;
-      }
-
-      return true;
-    });
+    .filter(({ transaction }) =>
+      matchesTransactionFilter(transaction, filterCriteria)
+    );
 
   const totalPages = Math.ceil(
     filteredTransactionsWithIndex.length / transactionsPerPage
