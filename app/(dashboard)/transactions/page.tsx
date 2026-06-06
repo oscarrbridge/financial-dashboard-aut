@@ -68,7 +68,9 @@ export default function TransactionsPage() {
   const [endDate, setEndDate] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const transactionsPerPage = 20;
+
+  // Number of transactions shown per page.
+  const transactionsPerPage = 15;
 
   const [transactionType, setTransactionType] =
     useState<TransactionType>("Expense");
@@ -80,6 +82,15 @@ export default function TransactionsPage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  const isFilterActive = startDate !== "" || endDate !== "";
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-NZ", {
+      style: "currency",
+      currency: "NZD",
+    }).format(amount);
+  };
 
   const formatDate = (date: Date) => {
     return date.toISOString().split("T")[0];
@@ -124,6 +135,7 @@ export default function TransactionsPage() {
 
   const startIndex = (currentPage - 1) * transactionsPerPage;
   const endIndex = startIndex + transactionsPerPage;
+
   const currentTransactions = filteredTransactionsWithIndex.slice(
     startIndex,
     endIndex
@@ -136,6 +148,7 @@ export default function TransactionsPage() {
     setTransactionDate("");
     setTransactionType("Expense");
     setEditingIndex(null);
+    setErrorMessage("");
   };
 
   const addTransaction = async () => {
@@ -159,8 +172,11 @@ export default function TransactionsPage() {
       return;
     }
 
-    setErrorMessage("");
+    if (!user) {
+      return;
+    }
 
+    setErrorMessage("");
 
     const selectedCategory =
       category === ""
@@ -177,11 +193,9 @@ export default function TransactionsPage() {
     };
 
     const newTransactionId = await addTransactionToFirestore(
-      user!.uid,
+      user.uid,
       newTransaction
     );
-
-
 
     setTransactions((currentTransactions) => [
       { ...newTransaction, id: newTransactionId },
@@ -216,10 +230,11 @@ export default function TransactionsPage() {
   const confirmEditTransaction = async () => {
     if (
       editingIndex === null ||
-      description === "" ||
+      description.trim() === "" ||
       amount === "" ||
       transactionDate === ""
     ) {
+      setErrorMessage("Please fill in all required fields.");
       return;
     }
 
@@ -256,7 +271,9 @@ export default function TransactionsPage() {
 
     setTransactions((currentTransactions) =>
       currentTransactions.map((transaction) =>
-        transaction.id === transactionToEdit.id ? updatedTransaction : transaction
+        transaction.id === transactionToEdit.id
+          ? updatedTransaction
+          : transaction
       )
     );
 
@@ -406,7 +423,11 @@ export default function TransactionsPage() {
   }, [user]);
 
   if (loading) {
-    return <p className="text-white">Loading...</p>;
+    return (
+      <p className="min-h-screen bg-white p-8 text-black dark:bg-black dark:text-white">
+        Loading...
+      </p>
+    );
   }
 
   if (!user) {
@@ -414,226 +435,255 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-8">
-      <h1 className="text-2xl mb-10">Welcome back &lt;user&gt;</h1>
+    <div className="min-h-screen w-full max-w-[900px] mx-auto bg-white text-black dark:bg-black dark:text-white">
+      {/* Sticky top area */}
+      <div className="sticky top-0 z-40 bg-white px-8 pt-8 pb-4 dark:bg-black">
+        <h1 className="mb-10 text-2xl">Welcome back &lt;user&gt;</h1>
 
-      <div className="grid grid-cols-3 bg-zinc-900 rounded-lg mb-6">
-        <div className="p-6 border-r border-zinc-500">
-          <p className="text-sm mb-6">Total Transactions</p>
-          <p className="text-3xl">{transactions.length}</p>
+        <div className="mb-6 grid grid-cols-3 rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="border-r border-zinc-300 p-6 dark:border-zinc-500">
+            <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-300">
+              Total Transactions
+            </p>
+            <p className="text-3xl">{transactions.length}</p>
+          </div>
+
+          <div className="border-r border-zinc-300 p-6 dark:border-zinc-500">
+            <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-300">
+              Total Income
+            </p>
+            <p className="text-3xl">{formatCurrency(totalIncome)}</p>
+          </div>
+
+          <div className="p-6">
+            <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-300">
+              Total Expenses
+            </p>
+            <p className="text-3xl">{formatCurrency(totalExpenses)}</p>
+          </div>
         </div>
 
-        <div className="p-6 border-r border-zinc-500">
-          <p className="text-sm mb-6">Total Income</p>
-          <p className="text-3xl">NZ${totalIncome.toFixed(2)}</p>
-        </div>
+        <div className="rounded-lg border border-zinc-200 bg-zinc-100 p-3 dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="flex gap-2">
+            <input
+              placeholder="Search Transactions"
+              value={searchText}
+              onChange={(event) => {
+                setSearchText(event.target.value);
+                setCurrentPage(1);
+              }}
+              className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-black outline-none focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-950 dark:text-white"
+            />
 
-        <div className="p-6">
-          <p className="text-sm mb-6">Total Expenses</p>
-          <p className="text-3xl">NZ${totalExpenses.toFixed(2)}</p>
+            <button
+              onClick={handleEditClick}
+              title="Edit"
+              className={`rounded-lg px-4 py-2 ${
+                editMode
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-black hover:bg-zinc-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+              }`}
+            >
+              <Pencil size={18} />
+            </button>
+
+            <button
+              onClick={handleDeleteClick}
+              title="Delete"
+              className={`rounded-lg px-4 py-2 ${
+                deleteMode
+                  ? "bg-red-600 text-white"
+                  : "bg-white text-black hover:bg-zinc-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+              }`}
+            >
+              <Trash2 size={18} />
+            </button>
+
+            <button
+              onClick={() => {
+                if (isFilterActive) {
+                  setStartDate("");
+                  setEndDate("");
+                  setCurrentPage(1);
+                  return;
+                }
+
+                setShowFilterPopup(true);
+              }}
+              title="Filter"
+              className={`rounded-lg px-4 py-2 ${
+                isFilterActive
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-black hover:bg-zinc-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+              }`}
+            >
+              <Filter size={18} />
+            </button>
+
+            <button
+              onClick={() => {
+                resetForm();
+                setEditMode(false);
+                setShowPopup(true);
+              }}
+              className="rounded-lg bg-white px-4 py-2 text-black hover:bg-zinc-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+            >
+              + New Transaction
+            </button>
+          </div>
+
+          {isFilterActive && (
+            <p className="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+              {`Showing transactions from ${startDate || "the beginning"} to ${
+                endDate || "today"
+              }`}
+            </p>
+          )}
         </div>
       </div>
 
-      <div className="bg-zinc-900 rounded-lg p-3">
-        <div className="flex gap-2 mb-3">
-          <input
-            placeholder="Search Transactions"
-            value={searchText}
-            onChange={(event) => {
-              setSearchText(event.target.value);
-              setCurrentPage(1);
+      {/* Transaction list area */}
+      <div className="px-8 pb-8">
+        <div className="rounded-lg border border-zinc-200 bg-zinc-100 p-3 dark:border-zinc-700 dark:bg-zinc-900">
+          {editMode && (
+            <p className="mb-3 text-sm text-blue-600 dark:text-blue-400">
+              Edit mode is on. Click a transaction to edit it.
+            </p>
+          )}
 
-            }}
+          {deleteMode && (
+            <div className="mb-3 flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={
+                  currentTransactions.length > 0 &&
+                  currentTransactions.every(({ originalIndex }) =>
+                    selectedTransactions.includes(originalIndex)
+                  )
+                }
+                onChange={toggleSelectAll}
+              />
+              <span>Select All</span>
+              <span className="text-zinc-600 dark:text-zinc-400">
+                {selectedTransactions.length} selected
+              </span>
+            </div>
+          )}
 
-            className="flex-1 bg-zinc-900 border border-zinc-600 rounded-lg px-4 py-2 text-white"
-          />
-
-
-
-          <button
-            onClick={handleEditClick}
-            title="Edit"
-            className={`px-4 py-2 rounded-lg ${editMode ? "bg-blue-600 text-white" : "bg-white text-black"
-              }`}
-          >
-            <Pencil size={18} />
-          </button>
-
-
-
-          <button
-            onClick={handleDeleteClick}
-            title="Delete"
-            className={`px-4 py-2 rounded-lg ${deleteMode ? "bg-red-600 text-white" : "bg-white text-black"
-              }`}
-          >
-            <Trash2 size={18} />
-          </button>
-
-          <button
-            onClick={() => {
-              if (startDate !== "" || endDate !== "") {
-                setStartDate("");
-                setEndDate("");
-                setCurrentPage(1);
-                return;
-              }
-
-              setShowFilterPopup(true);
-            }}
-            title="Filter"
-            className="bg-white text-black px-4 py-2 rounded-lg"
-          >
-            <Filter size={18} />
-          </button>
-
-          <button
-            onClick={() => {
-              resetForm();
-              setEditMode(false);
-              setShowPopup(true);
-            }}
-            className="bg-white text-black px-4 py-2 rounded-lg"
-          >
-            + New Transaction
-          </button>
-        </div>
-
-        {(startDate !== "" || endDate !== "") && (
-          <p className="text-sm text-zinc-400 mb-3">
-            {`Showing transactions from ${startDate || "the beginning"} to ${endDate || "today"
-              }`}
-          </p>
-        )}
-
-        {editMode && (
-          <p className="text-sm text-blue-400 mb-3">
-            Edit mode is on. Click a transaction to edit it.
-          </p>
-        )}
-
-        {deleteMode && (
-          <div className="flex items-center gap-2 mb-3 text-sm">
-            <input
-              type="checkbox"
-              checked={
-                currentTransactions.length > 0 &&
-                currentTransactions.every(({ originalIndex }) =>
-                  selectedTransactions.includes(originalIndex)
-                )
-              }
-              onChange={toggleSelectAll}
-            />
-            <span>Select All</span>
-            <span className="text-zinc-400">
-              {selectedTransactions.length} selected
-            </span>
-          </div>
-        )}
-
-        <div className="bg-zinc-800 rounded-lg p-2">
-          {currentTransactions.map(({ transaction, originalIndex }) => {
-            return (
-              <div
-                key={transaction.id || originalIndex}
-                onClick={() => openEditPopup(originalIndex)}
-                className={`bg-zinc-900 rounded-lg p-4 flex items-center mb-2 ${editMode ? "cursor-pointer border border-blue-500" : ""
-                  }`}
-              >
-                {deleteMode && (
-                  <input
-                    type="checkbox"
-                    checked={selectedTransactions.includes(originalIndex)}
-                    onChange={() => toggleSelectTransaction(originalIndex)}
-                    className="mr-3"
-                  />
-                )}
-
-                <div className="flex-1">
-                  <p className="font-bold">{transaction.description}</p>
-                  <p className="text-xs">
-                    {transaction.type} | {transaction.date}
-                  </p>
-                </div>
-
-                <span
-                  className={`border rounded-full px-4 py-1 text-xs ${transaction.type === "Income"
-                      ? "text-green-400 border-green-500"
-                      : transaction.type === "Debt"
-                        ? "text-yellow-400 border-yellow-500"
-                        : "text-red-400 border-red-500"
-                    }`}
-                >
-                  {transaction.category}
-                </span>
-
-                <p
-                  className={`text-xs w-32 text-right ${transaction.type === "Income"
-                      ? "text-green-400"
-                      : transaction.type === "Debt"
-                        ? "text-yellow-400"
-                        : "text-red-400"
-                    }`}
-                >
-                  {transaction.type === "Income" ? "+" : "-"}NZ$
-                  {transaction.amount.toFixed(2)}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-4">
-            <button
-              onClick={() => setCurrentPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="bg-white text-black px-3 py-1 rounded disabled:bg-zinc-700 disabled:text-zinc-400"
-            >
-              &lt;
-            </button>
-
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-              (pageNumber) => (
-                <button
-                  key={pageNumber}
-                  onClick={() => setCurrentPage(pageNumber)}
-                  className={`px-3 py-1 rounded ${currentPage === pageNumber
-                      ? "bg-white text-black"
-                      : "bg-zinc-700 text-white"
-                    }`}
-                >
-                  {pageNumber}
-                </button>
-              )
+          <div className="rounded-lg bg-zinc-200 p-2 dark:bg-zinc-800">
+            {currentTransactions.length === 0 && (
+              <p className="p-4 text-center text-sm text-zinc-600 dark:text-zinc-400">
+                No transactions found.
+              </p>
             )}
 
-            <button
-              onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="bg-white text-black px-3 py-1 rounded disabled:bg-zinc-700 disabled:text-zinc-400"
-            >
-              &gt;
-            </button>
+            {currentTransactions.map(({ transaction, originalIndex }) => {
+              return (
+                <div
+                  key={transaction.id || originalIndex}
+                  onClick={() => openEditPopup(originalIndex)}
+                  className={`mb-2 flex items-center rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 ${
+                    editMode ? "cursor-pointer border-blue-500" : ""
+                  }`}
+                >
+                  {deleteMode && (
+                    <input
+                      type="checkbox"
+                      checked={selectedTransactions.includes(originalIndex)}
+                      onChange={() => toggleSelectTransaction(originalIndex)}
+                      className="mr-3"
+                    />
+                  )}
+
+                  <div className="flex-1">
+                    <p className="font-bold">{transaction.description}</p>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                      {transaction.type} | {transaction.date}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`rounded-full border px-4 py-1 text-xs ${
+                      transaction.type === "Income"
+                        ? "border-green-500 text-green-600 dark:text-green-400"
+                        : transaction.type === "Debt"
+                          ? "border-yellow-500 text-yellow-600 dark:text-yellow-400"
+                          : "border-red-500 text-red-600 dark:text-red-400"
+                    }`}
+                  >
+                    {transaction.category}
+                  </span>
+
+                  <p
+                    className={`w-40 text-right text-xs ${
+                      transaction.type === "Income"
+                        ? "text-green-600 dark:text-green-400"
+                        : transaction.type === "Debt"
+                          ? "text-yellow-600 dark:text-yellow-400"
+                          : "text-red-600 dark:text-red-400"
+                    }`}
+                  >
+                    {transaction.type === "Income" ? "+" : "-"}
+                    {formatCurrency(transaction.amount)}
+                  </p>
+                </div>
+              );
+            })}
           </div>
-        )}
+
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="rounded bg-white px-3 py-1 text-black disabled:bg-zinc-300 disabled:text-zinc-500 dark:bg-zinc-800 dark:text-white dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
+              >
+                &lt;
+              </button>
+
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+                (pageNumber) => (
+                  <button
+                    key={pageNumber}
+                    onClick={() => setCurrentPage(pageNumber)}
+                    className={`rounded px-3 py-1 ${
+                      currentPage === pageNumber
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-black hover:bg-zinc-200 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
+                    }`}
+                  >
+                    {pageNumber}
+                  </button>
+                )
+              )}
+
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="rounded bg-white px-3 py-1 text-black disabled:bg-zinc-300 disabled:text-zinc-500 dark:bg-zinc-800 dark:text-white dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
+              >
+                &gt;
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {showFilterPopup && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="relative bg-zinc-950 border border-zinc-700 rounded-xl p-6 w-[420px] text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="relative w-[420px] rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
             <button
               onClick={() => setShowFilterPopup(false)}
-              className="absolute right-4 top-4 bg-white text-black px-3 py-1 rounded-lg font-bold"
+              className="absolute right-4 top-4 rounded-lg bg-zinc-200 px-3 py-1 font-bold text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
             >
               X
             </button>
 
-            <h2 className="text-2xl font-bold mb-4">Filter by Date</h2>
+            <h2 className="mb-4 text-2xl font-bold">Filter by Date</h2>
 
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="mb-4 grid grid-cols-2 gap-3">
               <div>
-                <label className="block mb-1">Start Date</label>
+                <label className="mb-1 block">Start Date</label>
                 <input
                   type="date"
                   value={startDate}
@@ -641,12 +691,12 @@ export default function TransactionsPage() {
                     setStartDate(event.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white"
+                  className="w-full rounded-lg border border-zinc-300 bg-white p-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
                 />
               </div>
 
               <div>
-                <label className="block mb-1">End Date</label>
+                <label className="mb-1 block">End Date</label>
                 <input
                   type="date"
                   value={endDate}
@@ -654,72 +704,68 @@ export default function TransactionsPage() {
                     setEndDate(event.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white"
+                  className="w-full rounded-lg border border-zinc-300 bg-white p-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 mb-5">
+            <div className="mb-5 grid grid-cols-3 gap-2">
               <button
                 onClick={setLastWeekFilter}
-                className="bg-zinc-800 text-white py-2 rounded-lg text-sm"
+                className="rounded-lg bg-zinc-200 py-2 text-sm text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
               >
                 Last Week
               </button>
 
               <button
                 onClick={() => setMonthRangeFilter(1)}
-                className="bg-zinc-800 text-white py-2 rounded-lg text-sm"
+                className="rounded-lg bg-zinc-200 py-2 text-sm text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
               >
                 Last Month
               </button>
 
               <button
                 onClick={() => setMonthRangeFilter(6)}
-                className="bg-zinc-800 text-white py-2 rounded-lg text-sm"
+                className="rounded-lg bg-zinc-200 py-2 text-sm text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
               >
                 Last 6 Months
               </button>
             </div>
 
-
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setCurrentPage(1);
-                  setShowFilterPopup(false);
-                }}
-                className="w-full bg-white text-black py-3 rounded-lg font-bold"
-              >
-                Apply
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setCurrentPage(1);
+                setShowFilterPopup(false);
+              }}
+              className="w-full rounded-lg bg-blue-600 py-3 font-bold text-white hover:bg-blue-700"
+            >
+              Apply
+            </button>
           </div>
         </div>
       )}
 
       {showPopup && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="relative bg-zinc-950 border border-zinc-700 rounded-xl p-6 w-[430px] text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="relative w-[430px] rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
             <button
               onClick={cancelPopup}
-              className="absolute right-4 top-4 bg-white text-black px-3 py-1 rounded-lg font-bold"
+              className="absolute right-4 top-4 rounded-lg bg-zinc-200 px-3 py-1 font-bold text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
             >
               X
             </button>
 
-            <h2 className="text-3xl font-bold mb-4">
+            <h2 className="mb-4 text-3xl font-bold">
               {editingIndex === null ? "New Transaction" : "Edit Transaction"}
             </h2>
 
             {editingIndex === null && (
-              <div className="mb-4 border border-zinc-700 rounded-lg p-3">
+              <div className="mb-4 rounded-lg border border-zinc-300 p-3 dark:border-zinc-700">
                 <CsvUpload onConfirmImport={handleConfirmCsvImport} />
               </div>
             )}
 
-            <div className="flex gap-2 mb-4">
+            <div className="mb-4 flex gap-2">
               {(["Expense", "Income", "Debt"] as TransactionType[]).map(
                 (type) => (
                   <button
@@ -728,10 +774,11 @@ export default function TransactionsPage() {
                       setTransactionType(type);
                       setCategory("");
                     }}
-                    className={`px-4 py-2 rounded-lg font-bold ${transactionType === type
-                        ? "bg-white text-black"
-                        : "bg-zinc-800 text-white"
-                      }`}
+                    className={`rounded-lg px-4 py-2 font-bold ${
+                      transactionType === type
+                        ? "bg-blue-600 text-white"
+                        : "bg-zinc-200 text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+                    }`}
                   >
                     {type}
                   </button>
@@ -739,30 +786,30 @@ export default function TransactionsPage() {
               )}
             </div>
 
-            <label className="block mb-1">
+            <label className="mb-1 block">
               Description<span className="text-red-500">*</span>
             </label>
             <input
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              className="w-full mb-3 p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white"
+              className="mb-3 w-full rounded-lg border border-zinc-300 bg-white p-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
             />
 
-            <label className="block mb-1">
+            <label className="mb-1 block">
               Amount<span className="text-red-500">*</span>
             </label>
             <input
               type="number"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
-              className="w-full mb-3 p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white"
+              className="mb-3 w-full rounded-lg border border-zinc-300 bg-white p-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
             />
 
-            <label className="block mb-1">Category</label>
+            <label className="mb-1 block">Category</label>
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
-              className="w-full mb-3 p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white"
+              className="mb-3 w-full rounded-lg border border-zinc-300 bg-white p-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
             >
               <option value="">Auto / Select Category</option>
 
@@ -773,18 +820,18 @@ export default function TransactionsPage() {
               ))}
             </select>
 
-            <label className="block mb-1">
+            <label className="mb-1 block">
               Transaction Date<span className="text-red-500">*</span>
             </label>
             <input
               type="date"
               value={transactionDate}
               onChange={(event) => setTransactionDate(event.target.value)}
-              className="w-full mb-5 p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white"
+              className="mb-5 w-full rounded-lg border border-zinc-300 bg-white p-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
             />
 
             {errorMessage !== "" && (
-              <p className="text-red-400 text-sm mb-3">
+              <p className="mb-3 text-sm text-red-500 dark:text-red-400">
                 {errorMessage}
               </p>
             )}
@@ -792,16 +839,18 @@ export default function TransactionsPage() {
             <div className="flex gap-2">
               <button
                 onClick={cancelPopup}
-                className="w-full bg-zinc-700 text-white py-3 rounded-lg font-bold"
+                className="w-full rounded-lg bg-zinc-200 py-3 font-bold text-black hover:bg-zinc-300 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
               >
                 Cancel
               </button>
 
               <button
                 onClick={
-                  editingIndex === null ? addTransaction : confirmEditTransaction
+                  editingIndex === null
+                    ? addTransaction
+                    : confirmEditTransaction
                 }
-                className="w-full bg-white text-black py-3 rounded-lg font-bold"
+                className="w-full rounded-lg bg-blue-600 py-3 font-bold text-white hover:bg-blue-700"
               >
                 {editingIndex === null ? "Add Transaction" : "Confirm Edit"}
               </button>
