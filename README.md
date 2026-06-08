@@ -23,4 +23,6 @@ Transaction Search and Filtering
 - Users can search for transactions by entering keywords from the transaction description.
 - Users can filter transactions by selecting a specific date range.
 
-
+Database Integration
+- Transaction data is stored and managed through a database, allowing users to create, update, retrieve, and delete transactions that persist across sessions.
+- User transactions are securely linked to their account and synchronized with the database.
