@@ -26,3 +26,10 @@ Transaction Search and Filtering
 Database Integration
 - Transaction data is stored and managed through a database, allowing users to create, update, retrieve, and delete transactions that persist across sessions.
 - User transactions are securely linked to their account and synchronized with the database.
+
+Navigation
+- A navigation bar provides quick access to the Budget, Transactions, Resources, and Dashboard pages.
+
+Account Management
+- An account menu, accessible via the account icon, allows users to manage their session.
+- Users can securely sign out of their account, which returns them to the login page.
