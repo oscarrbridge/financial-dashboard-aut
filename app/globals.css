@@ -55,3 +55,11 @@
   --spacing-6: var(--space-6);
   --spacing-8: var(--space-8);
 }
+
+/* Make date input calendar icon visible in dark mode */
+@media (prefers-color-scheme: dark) {
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+  }
+}
