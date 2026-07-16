@@ -630,42 +630,44 @@ export default function TransactionsPage() {
               );
             })}
           </div>
-
+            
           {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-center gap-2">
-              <button
-                onClick={() => setCurrentPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="rounded bg-white px-3 py-1 text-black disabled:bg-zinc-300 disabled:text-zinc-500 dark:bg-zinc-800 dark:text-white dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
-              >
-                &lt;
-              </button>
+  <div className="mt-4 w-full overflow-x-auto">
+    <div className="flex min-w-max items-center justify-center gap-2 px-1">
+      <button
+        onClick={() => setCurrentPage(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="rounded bg-white px-3 py-1 text-black disabled:bg-zinc-300 disabled:text-zinc-500 dark:bg-zinc-800 dark:text-white dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
+      >
+        &lt;
+      </button>
 
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-                (pageNumber) => (
-                  <button
-                    key={pageNumber}
-                    onClick={() => setCurrentPage(pageNumber)}
-                    className={`rounded px-3 py-1 ${
-                      currentPage === pageNumber
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-black hover:bg-zinc-200 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
-                    }`}
-                  >
-                    {pageNumber}
-                  </button>
-                )
-              )}
+      {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+        (pageNumber) => (
+          <button
+            key={pageNumber}
+            onClick={() => setCurrentPage(pageNumber)}
+            className={`rounded px-3 py-1 ${
+              currentPage === pageNumber
+                ? "bg-blue-600 text-white"
+                : "bg-white text-black hover:bg-zinc-200 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
+            }`}
+          >
+            {pageNumber}
+          </button>
+        )
+      )}
 
-              <button
-                onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="rounded bg-white px-3 py-1 text-black disabled:bg-zinc-300 disabled:text-zinc-500 dark:bg-zinc-800 dark:text-white dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
-              >
-                &gt;
-              </button>
-            </div>
-          )}
+      <button
+        onClick={() => setCurrentPage(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="rounded bg-white px-3 py-1 text-black disabled:bg-zinc-300 disabled:text-zinc-500 dark:bg-zinc-800 dark:text-white dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
+      >
+        &gt;
+      </button>
+    </div>
+  </div>
+)}
         </div>
       </div>
 
