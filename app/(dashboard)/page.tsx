@@ -10,11 +10,23 @@ import { getUserTransactions } from "@/lib/firebase/transactions";
 import { Transaction } from '@/lib/firebase/transactions'
 import { formatCurrency } from '@/lib/transactions/formatCurrency';
 import { matchesTransactionFilter } from '@/lib/transactions/filterTransactions';
+import GroupedBar from '../components/charts/groupedBar';
 
 const timeframeDays: Record<string, number> = {
   '7D': 7,
   '30D': 30,
   '365D': 365,
+};
+
+const budgetByCategory: Record<string, number> = {
+  Accommodation: 400,
+  Groceries: 300,
+  'Food & Dining': 200,
+  Transport: 150,
+  Education: 120,
+  Entertainment: 100,
+  Utilities: 120,
+  'Personal Care': 90,
 };
 
 function formatDate(date: Date) {
@@ -25,7 +37,7 @@ export default function DashboardPage() {
   const user = useAuth();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [timeframe, setTimeframe] = useState('30D');
+  const [timeframe, setTimeframe] = useState('7D');
 
   useEffect(() => {
     async function loadTransactions() {
@@ -52,13 +64,30 @@ export default function DashboardPage() {
 
   const stats = useFinancialStats(filteredTransactions)
 
+  const categorySpend = useMemo(() => {
+    const totals: Record<string, number> = {};
+    filteredTransactions
+      .filter(t => t.type === 'Expense')
+      .forEach(t => {
+        totals[t.category] = (totals[t.category] ?? 0) + t.amount;
+      });
+    return totals;
+  }, [filteredTransactions]);
+
+  const budgetCategories = Object.keys(budgetByCategory);
+
+  const budgetVsActualSeries = useMemo(() => [
+    { name: 'Budget', data: budgetCategories.map(c => budgetByCategory[c]), color: '#6366f1' },
+    { name: 'Actual', data: budgetCategories.map(c => categorySpend[c] ?? 0), color: '#f97316' },
+  ], [categorySpend, budgetCategories]);
+
   return (
     <div className='flex flex-col w-full h-full p-6 gap-5'>
       <div className='w-full flex justify-end'>
         <Wrapper className='h-2'>
           <div className='flex flex-row'>
             <p className='text-xl'>Timeframe:</p>
-            <DropDown options={["7D", "30D", "365D"]} onChange={setTimeframe} />
+            <DropDown value={timeframe} options={["7D", "30D", "365D"]} onChange={setTimeframe} />
           </div>
         </Wrapper>
       </div>
@@ -79,6 +108,11 @@ export default function DashboardPage() {
             <div className='w-full text-left'><p className='text-xl'>Savings rate:</p></div>
             <div className='w-full text-left'><p className='text-xl'>Savings projection:</p></div>
           </Wrapper>
+        </div>
+
+        <div className='flex flex-col gap-2 w-full'>
+          <div><h2 className='font-semibold text-2xl'>Budget vs Actual</h2></div>
+          <GroupedBar categories={budgetCategories} series={budgetVsActualSeries} />
         </div>
 
     </div>
