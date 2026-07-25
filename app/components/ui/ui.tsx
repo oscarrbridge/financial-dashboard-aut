@@ -120,3 +120,18 @@ export function NavIcon({
 		</Link>
 	);
 }
+
+type dropDownProps = {
+	options : string[];
+	onChange?: (selected: string) => void;
+}
+
+export function DropDown({ options, onChange } : dropDownProps){
+	return (
+		<select onChange={(e) => onChange?.(e.target.value)}>
+			{options.map((option, index) => (
+				<option key={index} value={option}>{option}</option>
+			)) }
+		</select>
+	);
+}
