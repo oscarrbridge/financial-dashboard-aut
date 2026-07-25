@@ -12,12 +12,16 @@ import { formatCurrency } from '@/lib/transactions/formatCurrency';
 import { matchesTransactionFilter, normalizeCsvDate } from '@/lib/transactions/filterTransactions';
 import GroupedBar from '../components/charts/groupedBar';
 import LineChart from '../components/charts/lineChart';
+import SankeyChart from '../components/charts/sankeyChart';
+import PieChart from '../components/charts/pieChart';
 
 const timeframeDays: Record<string, number> = {
   '7D': 7,
   '30D': 30,
   '365D': 365,
 };
+
+const flowCategoryColors = ['#a3b833', '#dc2626', '#a21caf', '#0ea5e9', '#f59e0b', '#14b8a6', '#e11d48', '#8b5cf6'];
 
 const budgetByCategory: Record<string, number> = {
   Accommodation: 400,
@@ -129,6 +133,89 @@ export default function DashboardPage() {
     ? (expensesDelta / previousPeriodExpenses) * 100
     : 0;
 
+  const cashFlowData = useMemo(() => {
+    const nodes = [{ name: 'Income', color: '#4ade80' }];
+    const links: { source: string; target: string; value: number }[] = [];
+
+    Object.entries(categorySpend).forEach(([category, amount], index) => {
+      nodes.push({ name: category, color: flowCategoryColors[index % flowCategoryColors.length] });
+      links.push({ source: 'Income', target: category, value: amount });
+    });
+
+    if (stats.surplus > 0) {
+      nodes.push({ name: 'Surplus', color: '#3b82f6' });
+      links.push({ source: 'Income', target: 'Surplus', value: stats.surplus });
+    }
+
+    return { nodes, links };
+  }, [categorySpend, stats.surplus]);
+
+  const incomeByCategory = useMemo(() => {
+    const totals: Record<string, number> = {};
+    filteredTransactions
+      .filter(t => t.type === 'Income')
+      .forEach(t => {
+        totals[t.category] = (totals[t.category] ?? 0) + t.amount;
+      });
+    return totals;
+  }, [filteredTransactions]);
+
+  const spendingBreakdown = useMemo(() =>
+    Object.entries(categorySpend).map(([name, value], index) => ({
+      name,
+      value,
+      color: flowCategoryColors[index % flowCategoryColors.length],
+    })),
+  [categorySpend]);
+
+  const incomeBreakdown = useMemo(() =>
+    Object.entries(incomeByCategory).map(([name, value], index) => ({
+      name,
+      value,
+      color: flowCategoryColors[index % flowCategoryColors.length],
+    })),
+  [incomeByCategory]);
+
+  const weeklyIncomeExpense = useMemo(() => {
+    const days = timeframeDays[timeframe];
+    const today = new Date();
+    const start = new Date();
+    start.setDate(today.getDate() - days);
+
+    const weeks: { label: string; income: number; expenses: number }[] = [];
+    const weekStart = new Date(start);
+    let weekIndex = 1;
+
+    while (weekStart <= today) {
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      const cappedEnd = weekEnd > today ? today : weekEnd;
+
+      const weekTransactions = filteredTransactions.filter(t => {
+        const date = normalizeCsvDate(t.date);
+        return date >= formatDate(weekStart) && date <= formatDate(cappedEnd);
+      });
+
+      weeks.push({
+        label: `Week ${weekIndex}`,
+        income: weekTransactions.filter(t => t.type === 'Income').reduce((sum, t) => sum + t.amount, 0),
+        expenses: weekTransactions.filter(t => t.type === 'Expense').reduce((sum, t) => sum + t.amount, 0),
+      });
+
+      weekStart.setDate(weekStart.getDate() + 7);
+      weekIndex++;
+    }
+
+    return weeks;
+  }, [filteredTransactions, timeframe]);
+
+  const weeklyCategories = weeklyIncomeExpense.map(w => w.label);
+
+  const weeklyIncomeExpenseSeries = useMemo(() => [
+    { name: 'Income', data: weeklyIncomeExpense.map(w => w.income), color: '#4ade80' },
+    { name: 'Expenses', data: weeklyIncomeExpense.map(w => w.expenses), color: '#f87171' },
+  ], [weeklyIncomeExpense]);
+
   return (
     <div className='flex flex-col w-full h-full p-6 gap-5'>
       <div className='w-full flex justify-end'>
@@ -158,6 +245,20 @@ export default function DashboardPage() {
           </Wrapper>
         </div>
 
+        <div className='flex flex-row w-full gap-5'>
+          <div className='flex flex-col gap-2 w-full'>
+            <div><h2 className='font-semibold text-2xl'>Budget vs Actual</h2></div>
+            <GroupedBar categories={budgetCategories} series={budgetVsActualSeries} />
+          </div>
+
+          <div className='flex flex-col gap-2 w-full'>
+            <div><h2 className='font-semibold text-2xl'>Cash Flow</h2></div>
+            <Wrapper className='w-full'>
+              <SankeyChart nodes={cashFlowData.nodes} links={cashFlowData.links} />
+            </Wrapper>
+          </div>
+        </div>
+
         <div className='flex flex-col gap-2 w-full'>
           <div><h2 className='font-semibold text-2xl'>Expenses Over Time</h2></div>
           <Wrapper className='w-full'>
@@ -171,9 +272,25 @@ export default function DashboardPage() {
           </Wrapper>
         </div>
 
+        <div className='flex flex-row w-full gap-5'>
+          <div className='flex flex-col gap-2 w-full'>
+            <div><h2 className='font-semibold text-2xl'>Spending Breakdown</h2></div>
+            <Wrapper className='w-full'>
+              <PieChart data={spendingBreakdown} />
+            </Wrapper>
+          </div>
+
+          <div className='flex flex-col gap-2 w-full'>
+            <div><h2 className='font-semibold text-2xl'>Income Breakdown</h2></div>
+            <Wrapper className='w-full'>
+              <PieChart data={incomeBreakdown} />
+            </Wrapper>
+          </div>
+        </div>
+
         <div className='flex flex-col gap-2 w-full'>
-          <div><h2 className='font-semibold text-2xl'>Budget vs Actual</h2></div>
-          <GroupedBar categories={budgetCategories} series={budgetVsActualSeries} />
+          <div><h2 className='font-semibold text-2xl'>Income vs Expenses</h2></div>
+          <GroupedBar categories={weeklyCategories} series={weeklyIncomeExpenseSeries} />
         </div>
 
     </div>
