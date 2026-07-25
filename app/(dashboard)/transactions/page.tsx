@@ -18,6 +18,8 @@ import {
   deleteTransactionFromFirestore,
 } from "@/lib/firebase/transactions";
 
+import { formatCurrency } from '@/lib/transactions/formatCurrency';
+
 type TransactionType = "Expense" | "Income" | "Debt";
 
 type Transaction = {
@@ -85,12 +87,12 @@ export default function TransactionsPage() {
 
   const isFilterActive = startDate !== "" || endDate !== "";
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-NZ", {
-      style: "currency",
-      currency: "NZD",
-    }).format(amount);
-  };
+  // const formatCurrency = (amount: number) => {
+  //   return new Intl.NumberFormat("en-NZ", {
+  //     style: "currency",
+  //     currency: "NZD",
+  //   }).format(amount);
+  // };
 
   const formatDate = (date: Date) => {
     return date.toISOString().split("T")[0];
