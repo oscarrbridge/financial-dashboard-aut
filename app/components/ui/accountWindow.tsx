@@ -17,7 +17,7 @@ export default function AccountWindow() {
         <div className="account-window ">
             Hi {user?.displayName}!
             <Button width={180} onClick={handleSignOut}>Sign Out</Button>
-            <Button width={180}>My Account</Button>
+            <Button width={180} onClick={() => router.push("/settings")}>My Account</Button>
         </div>
     );
 }

@@ -31,6 +31,7 @@ type InputProps = {
 	autoComplete?: string;
 	name?: string;
 	id?: string;
+	maxLength?: number;
 };
 
 export function Input({
@@ -41,6 +42,7 @@ export function Input({
 	autoComplete,
 	name,
 	id,
+	maxLength,
 }: InputProps) {
 	return (
 		<input
@@ -52,6 +54,7 @@ export function Input({
 			autoComplete={autoComplete}
 			name={name}
 			id={id}
+			maxLength={maxLength}
 		/>
 	);
 }

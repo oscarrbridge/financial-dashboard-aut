@@ -35,7 +35,7 @@ export default function LoginPage() {
 		}
 		try {
 			setLoginMessage("Signing Up...");
-			await signUp(email, password);
+			await signUp(fullName, email, password);
 			router.push("/");
 		} catch (error) {
 			if (error instanceof FirebaseError) {
@@ -164,6 +164,7 @@ export default function LoginPage() {
 								autoComplete="name"
 								name="name"
 								id="name"
+								maxLength={50}
 							/>
 							<Input
 								value={email}
