@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Wrapper, Button, Input, MultiSelect } from "@/app/components/ui/ui";
-import { signUp, signIn, signInWithGoogle } from "@/lib/firebase/auth";
+import { signUp, signIn, signInWithGoogle, resetPassword } from "@/lib/firebase/auth";
 import { useRouter } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import ChromeIcon from "@/app/components/icons/chrome";
@@ -98,6 +98,23 @@ export default function LoginPage() {
 		}
 	};
 
+	const handleForgotPassword = async () => {
+		if (!email.trim()) {
+			setLoginMessage("Enter your email to receive a reset link");
+			return;
+		}
+
+		try {
+			setLoginMessage("Sending password reset link...");
+			await resetPassword(email.trim());
+			setLoginMessage("Check your inbox for a password reset link");
+		} catch (error) {
+			if (error instanceof Error) {
+				setLoginMessage(error.message);
+			}
+		}
+	};
+
 	return (
 		<div className="flex items-center h-screen">
 			<Wrapper>
@@ -143,6 +160,13 @@ export default function LoginPage() {
 								</div>
 							</Button>
 							<Button onClick={loginUser} type="button" buttonText="Login" />
+							<button
+								type="button"
+								className="text-sm text-blue-600 hover:underline self-start"
+								onClick={handleForgotPassword}
+							>
+								Forgot password?
+							</button>
 						</form>
 					</>
 				)}

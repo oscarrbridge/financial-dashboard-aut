@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { Wrapper, Button, Input } from "@/app/components/ui/ui";
 import { requireAuth } from "@/lib/firebase/requireAuth";
-import { updateDisplayName, changeEmail, changePassword } from "@/lib/firebase/auth";
-import { FirebaseError } from "firebase/app";
+import { updateDisplayName, resetPassword } from "@/lib/firebase/auth";
 
 export default function SettingsPage() {
 	const { user, loading } = requireAuth();
@@ -33,98 +32,22 @@ export default function SettingsPage() {
 		}
 	};
 
-	// Email (password accounts only)
-	const [newEmail, setNewEmail] = useState("");
-	const [emailCurrentPassword, setEmailCurrentPassword] = useState("");
-	const [emailMessage, setEmailMessage] = useState("");
-
-	const handleChangeEmail = async () => {
-		if (newEmail === "" || emailCurrentPassword === "") {
-			setEmailMessage("All fields must be filled in");
-			return;
-		}
-		if (newEmail === user?.email) {
-			setEmailMessage("That's already your email");
-			return;
-		}
-		try {
-			setEmailMessage("Sending verification link...");
-			await changeEmail(newEmail, emailCurrentPassword);
-			setEmailMessage(
-				`Check ${newEmail} for a verification link. Your email won't change until you click it.`
-			);
-			setEmailCurrentPassword("");
-		} catch (error) {
-			if (error instanceof FirebaseError) {
-				switch (error.code) {
-					case "auth/email-already-in-use":
-						setEmailMessage("This email is in use");
-						break;
-					case "auth/invalid-email":
-						setEmailMessage("Invalid email");
-						break;
-					case "auth/invalid-credential":
-					case "auth/wrong-password":
-						setEmailMessage("Incorrect password");
-						break;
-					case "auth/requires-recent-login":
-						setEmailMessage("Please sign out and back in, then try again");
-						break;
-					case "auth/too-many-requests":
-						setEmailMessage("Too many attempts, try again later");
-						break;
-					default:
-						setEmailMessage(error.message);
-				}
-			}
-		}
-	};
-
-	// Password (password accounts only)
-	const [currentPassword, setCurrentPassword] = useState("");
-	const [newPassword, setNewPassword] = useState("");
-	const [confirmNewPassword, setConfirmNewPassword] = useState("");
+	// Password reset (password accounts only)
 	const [passwordMessage, setPasswordMessage] = useState("");
 
-	const handleChangePassword = async () => {
-		if (currentPassword === "" || newPassword === "") {
-			setPasswordMessage("All fields must be filled in");
+	const handleResetPassword = async () => {
+		if (!user?.email) {
+			setPasswordMessage("No email address found for this account");
 			return;
 		}
-		if (newPassword !== confirmNewPassword) {
-			setPasswordMessage("Passwords must match");
-			return;
-		}
-		if (newPassword.length < 6) {
-			setPasswordMessage("Password must be longer than 6 char");
-			return;
-		}
+
 		try {
-			setPasswordMessage("Saving...");
-			await changePassword(currentPassword, newPassword);
-			setPasswordMessage("Password updated");
-			setCurrentPassword("");
-			setNewPassword("");
-			setConfirmNewPassword("");
+			setPasswordMessage("Sending reset email...");
+			await resetPassword(user.email);
+			setPasswordMessage("Check your inbox for a password reset link");
 		} catch (error) {
-			if (error instanceof FirebaseError) {
-				switch (error.code) {
-					case "auth/invalid-credential":
-					case "auth/wrong-password":
-						setPasswordMessage("Incorrect current password");
-						break;
-					case "auth/weak-password":
-						setPasswordMessage("Password is too weak");
-						break;
-					case "auth/requires-recent-login":
-						setPasswordMessage("Please sign out and back in, then try again");
-						break;
-					case "auth/too-many-requests":
-						setPasswordMessage("Too many attempts, try again later");
-						break;
-					default:
-						setPasswordMessage(error.message);
-				}
+			if (error instanceof Error) {
+				setPasswordMessage(error.message);
 			}
 		}
 	};
@@ -172,69 +95,19 @@ export default function SettingsPage() {
 						</div>
 					) : (
 						<>
-							{/* Email — password accounts only */}
-							<div className="flex flex-col gap-(--space-3)">
-								<div>Change Email</div>
-								{emailMessage != "" && (
-									<p className="text-error-text">{emailMessage}</p>
-								)}
-								<Input
-									value={newEmail}
-									onChange={setNewEmail}
-									placeholder="New Email"
-									autoComplete="off"
-									name="new-email"
-									id="new-email"
-								/>
-								<Input
-									value={emailCurrentPassword}
-									onChange={setEmailCurrentPassword}
-									placeholder="Current Password"
-									type="password"
-									autoComplete="new-password"
-									name="email-current-password"
-									id="email-current-password"
-								/>
-								<div className="self-start">
-									<Button onClick={handleChangeEmail} type="button" buttonText="Update Email" width={160} />
-								</div>
-							</div>
+
 
 							{/* Password — password accounts only */}
 							<div className="flex flex-col gap-(--space-3)">
-								<div>Change Password</div>
+								<div>Reset Password</div>
 								{passwordMessage != "" && (
 									<p className="text-error-text">{passwordMessage}</p>
 								)}
-								<Input
-									value={currentPassword}
-									onChange={setCurrentPassword}
-									placeholder="Current Password"
-									type="password"
-									autoComplete="new-password"
-									name="current-password"
-									id="current-password"
-								/>
-								<Input
-									value={newPassword}
-									onChange={setNewPassword}
-									placeholder="New Password"
-									type="password"
-									autoComplete="new-password"
-									name="new-password"
-									id="new-password"
-								/>
-								<Input
-									value={confirmNewPassword}
-									onChange={setConfirmNewPassword}
-									placeholder="Confirm New Password"
-									type="password"
-									autoComplete="new-password"
-									name="confirm-new-password"
-									id="confirm-new-password"
-								/>
+								<p className="text-sm text-gray-600">
+									We’ll send a password reset link to your email address.
+								</p>
 								<div className="self-start">
-									<Button onClick={handleChangePassword} type="button" buttonText="Update Password" width={160} />
+									<Button onClick={handleResetPassword} type="button" buttonText="Send Password Reset Link" width={220} />
 								</div>
 							</div>
 						</>
