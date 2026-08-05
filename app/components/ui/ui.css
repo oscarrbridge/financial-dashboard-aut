@@ -80,6 +80,69 @@
     color: var(--text-color);
 }
 
+.info-tooltip {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    z-index: 10;
+}
+
+.info-tooltip-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    width: 18px;
+    height: 18px;
+
+    border-radius: 50%;
+
+    font-size: 0.7em;
+    font-weight: bold;
+    line-height: 1;
+    cursor: default;
+
+    color: var(--button-text-color);
+    background: var(--text-color);
+}
+
+.info-tooltip-text {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+
+    width: 220px;
+    padding: var(--space-2);
+
+    border-radius: var(--radius-sm);
+
+    font-size: 0.75em;
+    font-weight: normal;
+    line-height: 1.4;
+    text-align: left;
+
+    color: var(--text-color);
+    background: var(--widget-color);
+
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.info-tooltip:hover .info-tooltip-text {
+    display: block;
+}
+
+.no-data {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    width: 100%;
+
+    color: var(--inactive-text-color);
+    font-size: 1em;
+}
+
 .custom-nav-icon {
     display: flex;
     justify-content: center;
