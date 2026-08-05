@@ -41,7 +41,7 @@ export default function LineChart({ data, color = '#4ade80', height = 160 }: Lin
         trigger: 'axis',
         formatter: (params: unknown) => {
           const point = (params as { name: string; value: number }[])[0];
-          return `${point.name}: ${point.value}`;
+          return `${point.name}: ${point.value.toFixed(2)}`;
         },
       },
       series: [{

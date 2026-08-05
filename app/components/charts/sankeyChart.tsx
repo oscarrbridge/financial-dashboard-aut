@@ -32,7 +32,21 @@ export default function SankeyChart({ nodes, links, height = 400 }: SankeyChartP
     const chart = echarts.init(chartContainer.current);
 
     chart.setOption({
-      tooltip: { trigger: 'item' },
+      tooltip: {
+        trigger: 'item',
+        formatter: (params: unknown) => {
+          const { dataType, name, value, data } = params as {
+            dataType: string;
+            name: string;
+            value: number;
+            data: { source?: string; target?: string };
+          };
+          if (dataType === 'edge') {
+            return `${data.source} → ${data.target}: ${value.toFixed(2)}`;
+          }
+          return `${name}: ${value.toFixed(2)}`;
+        },
+      },
       series: [{
         type: 'sankey',
         data: nodes.map(n => ({

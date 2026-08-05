@@ -26,7 +26,15 @@ export default function GroupedBar({ categories, series, height = 320 }: Grouped
     const chart = echarts.init(chartContainer.current);
 
     chart.setOption({
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params: unknown) => {
+          const items = params as { axisValue: string; marker: string; seriesName: string; value: number }[];
+          const rows = items.map(p => `${p.marker}${p.seriesName}: ${p.value.toFixed(2)}`).join('<br/>');
+          return `${items[0]?.axisValue ?? ''}<br/>${rows}`;
+        },
+      },
       legend: { data: series.map(s => s.name), top: 0, left: 'center', textStyle: { color: '#ccc' } },
       grid: { left: '3%', right: '4%', bottom: '3%', top: 60, containLabel: true },
       xAxis: {

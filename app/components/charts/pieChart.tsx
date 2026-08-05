@@ -25,7 +25,13 @@ export default function PieChart({ data, height = 320 }: PieChartProps) {
     const chart = echarts.init(chartContainer.current);
 
     chart.setOption({
-      tooltip: { trigger: 'item' },
+      tooltip: {
+        trigger: 'item',
+        formatter: (params: unknown) => {
+          const { name, value, percent } = params as { name: string; value: number; percent: number };
+          return `${name}: ${value.toFixed(2)} (${percent.toFixed(2)}%)`;
+        },
+      },
       legend: {
         orient: 'vertical',
         right: 10,
