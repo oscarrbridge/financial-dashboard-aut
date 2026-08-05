@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts';
+import { InfoTooltip, NoData } from '@/app/components/ui/ui';
 
 type SankeyNode = {
   name: string;
@@ -22,9 +23,10 @@ type SankeyChartProps = {
 
 export default function SankeyChart({ nodes, links, height = 400 }: SankeyChartProps) {
   const chartContainer = useRef<HTMLDivElement>(null);
+  const hasData = links.some(l => l.value > 0);
 
   useEffect(() => {
-    if (!chartContainer.current) return;
+    if (!chartContainer.current || !hasData) return;
 
     const chart = echarts.init(chartContainer.current);
 
@@ -52,7 +54,16 @@ export default function SankeyChart({ nodes, links, height = 400 }: SankeyChartP
       window.removeEventListener('resize', handleResize);
       chart.dispose();
     };
-  }, [nodes, links]);
+  }, [nodes, links, hasData]);
 
-  return <div ref={chartContainer} style={{ width: '100%', height }} />;
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <InfoTooltip text="Shows where your money goes. Each band flows from a source (e.g. Income) to a destination (e.g. a spending category) — the thicker the band, the more money moved along that path." />
+      {hasData ? (
+        <div ref={chartContainer} style={{ width: '100%', height }} />
+      ) : (
+        <NoData height={height} />
+      )}
+    </div>
+  );
 }

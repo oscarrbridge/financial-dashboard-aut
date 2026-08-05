@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts';
+import { InfoTooltip, NoData } from '@/app/components/ui/ui';
 
 type LineChartPoint = {
   label: string;
@@ -16,9 +17,10 @@ type LineChartProps = {
 
 export default function LineChart({ data, color = '#4ade80', height = 160 }: LineChartProps) {
   const chartContainer = useRef<HTMLDivElement>(null);
+  const hasData = data.some(d => d.value > 0);
 
   useEffect(() => {
-    if (!chartContainer.current) return;
+    if (!chartContainer.current || !hasData) return;
 
     const chart = echarts.init(chartContainer.current);
 
@@ -64,7 +66,16 @@ export default function LineChart({ data, color = '#4ade80', height = 160 }: Lin
       window.removeEventListener('resize', handleResize);
       chart.dispose();
     };
-  }, [data, color]);
+  }, [data, color, hasData]);
 
-  return <div ref={chartContainer} style={{ width: '100%', height }} />;
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <InfoTooltip text="A line chart showing how a value changes over time, read left to right." />
+      {hasData ? (
+        <div ref={chartContainer} style={{ width: '100%', height }} />
+      ) : (
+        <NoData height={height} />
+      )}
+    </div>
+  );
 }

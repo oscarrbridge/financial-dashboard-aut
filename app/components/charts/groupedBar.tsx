@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts';
-import { Wrapper } from '@/app/components/ui/ui';
+import { Wrapper, InfoTooltip, NoData } from '@/app/components/ui/ui';
 
 type GroupedBarSeries = {
   name: string;
@@ -18,9 +18,10 @@ type GroupedBarProps = {
 
 export default function GroupedBar({ categories, series, height = 320 }: GroupedBarProps) {
   const chartContainer = useRef<HTMLDivElement>(null);
+  const hasData = categories.length > 0 && series.some(s => s.data.some(v => v > 0));
 
   useEffect(() => {
-    if (!chartContainer.current) return;
+    if (!chartContainer.current || !hasData) return;
 
     const chart = echarts.init(chartContainer.current);
 
@@ -52,11 +53,16 @@ export default function GroupedBar({ categories, series, height = 320 }: Grouped
       window.removeEventListener('resize', handleResize);
       chart.dispose();
     };
-  }, [categories, series]);
+  }, [categories, series, hasData]);
 
   return (
-    <Wrapper className="w-full">
-      <div ref={chartContainer} style={{ width: '100%', height }} />
+    <Wrapper className="w-full" style={{ position: 'relative' }}>
+      <InfoTooltip text="A grouped bar chart. Bars of the same color belong to one series, clustered by category for side-by-side comparison." />
+      {hasData ? (
+        <div ref={chartContainer} style={{ width: '100%', height }} />
+      ) : (
+        <NoData height={height} />
+      )}
     </Wrapper>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts';
+import { InfoTooltip, NoData } from '@/app/components/ui/ui';
 
 type PieChartSlice = {
   name: string;
@@ -16,9 +17,10 @@ type PieChartProps = {
 
 export default function PieChart({ data, height = 320 }: PieChartProps) {
   const chartContainer = useRef<HTMLDivElement>(null);
+  const hasData = data.some(d => d.value > 0);
 
   useEffect(() => {
-    if (!chartContainer.current) return;
+    if (!chartContainer.current || !hasData) return;
 
     const chart = echarts.init(chartContainer.current);
 
@@ -50,7 +52,16 @@ export default function PieChart({ data, height = 320 }: PieChartProps) {
       window.removeEventListener('resize', handleResize);
       chart.dispose();
     };
-  }, [data]);
+  }, [data, hasData]);
 
-  return <div ref={chartContainer} style={{ width: '100%', height }} />;
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <InfoTooltip text="A pie chart. Each slice represents a category, sized proportionally to its share of the total." />
+      {hasData ? (
+        <div ref={chartContainer} style={{ width: '100%', height }} />
+      ) : (
+        <NoData height={height} />
+      )}
+    </div>
+  );
 }
