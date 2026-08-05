@@ -102,9 +102,11 @@ export default function DashboardPage() {
 
     const points: { label: string; value: number }[] = [];
     const cursor = new Date(start);
+    let runningTotal = 0;
     while (cursor <= today) {
       const dateStr = formatDate(cursor);
-      points.push({ label: dateStr, value: totals[dateStr] ?? 0 });
+      runningTotal += totals[dateStr] ?? 0;
+      points.push({ label: dateStr, value: runningTotal });
       cursor.setDate(cursor.getDate() + 1);
     }
     return points;
@@ -133,23 +135,6 @@ export default function DashboardPage() {
     ? (expensesDelta / previousPeriodExpenses) * 100
     : 0;
 
-  const cashFlowData = useMemo(() => {
-    const nodes = [{ name: 'Income', color: '#4ade80' }];
-    const links: { source: string; target: string; value: number }[] = [];
-
-    Object.entries(categorySpend).forEach(([category, amount], index) => {
-      nodes.push({ name: category, color: flowCategoryColors[index % flowCategoryColors.length] });
-      links.push({ source: 'Income', target: category, value: amount });
-    });
-
-    if (stats.surplus > 0) {
-      nodes.push({ name: 'Surplus', color: '#3b82f6' });
-      links.push({ source: 'Income', target: 'Surplus', value: stats.surplus });
-    }
-
-    return { nodes, links };
-  }, [categorySpend, stats.surplus]);
-
   const incomeByCategory = useMemo(() => {
     const totals: Record<string, number> = {};
     filteredTransactions
@@ -159,6 +144,28 @@ export default function DashboardPage() {
       });
     return totals;
   }, [filteredTransactions]);
+
+  const cashFlowData = useMemo(() => {
+    const nodes = [{ name: 'Income', color: '#4ade80', depth: 1 }];
+    const links: { source: string; target: string; value: number }[] = [];
+
+    Object.entries(incomeByCategory).forEach(([category, amount], index) => {
+      nodes.push({ name: category, color: flowCategoryColors[index % flowCategoryColors.length], depth: 0 });
+      links.push({ source: category, target: 'Income', value: amount });
+    });
+
+    Object.entries(categorySpend).forEach(([category, amount], index) => {
+      nodes.push({ name: category, color: flowCategoryColors[index % flowCategoryColors.length], depth: 3 });
+      links.push({ source: 'Income', target: category, value: amount });
+    });
+
+    if (stats.surplus > 0) {
+      nodes.push({ name: 'Surplus', color: '#3b82f6', depth: 3 });
+      links.push({ source: 'Income', target: 'Surplus', value: stats.surplus });
+    }
+
+    return { nodes, links };
+  }, [incomeByCategory, categorySpend, stats.surplus]);
 
   const spendingBreakdown = useMemo(() =>
     Object.entries(categorySpend).map(([name, value], index) => ({

@@ -7,6 +7,7 @@ import { InfoTooltip, NoData } from '@/app/components/ui/ui';
 type SankeyNode = {
   name: string;
   color?: string;
+  depth?: number;
 };
 
 type SankeyLink = {
@@ -36,6 +37,7 @@ export default function SankeyChart({ nodes, links, height = 400 }: SankeyChartP
         type: 'sankey',
         data: nodes.map(n => ({
           name: n.name,
+          depth: n.depth,
           itemStyle: n.color ? { color: n.color } : undefined,
         })),
         links,
@@ -58,7 +60,7 @@ export default function SankeyChart({ nodes, links, height = 400 }: SankeyChartP
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>
-      <InfoTooltip text="Shows where your money goes. Each band flows from a source (e.g. Income) to a destination (e.g. a spending category) — the thicker the band, the more money moved along that path." />
+      <InfoTooltip text="Shows where your money goes. Each band flows from a source (e.g. Income) to a destination (e.g. a spending category) The thicker the band, the more money moved along that path." />
       {hasData ? (
         <div ref={chartContainer} style={{ width: '100%', height }} />
       ) : (
