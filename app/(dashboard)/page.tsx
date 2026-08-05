@@ -21,6 +21,8 @@ const timeframeDays: Record<string, number> = {
   '365D': 365,
 };
 
+const TIMEFRAME_STORAGE_KEY = 'dashboard.timeframe';
+
 const flowCategoryColors = ['#a3b833', '#dc2626', '#a21caf', '#0ea5e9', '#f59e0b', '#14b8a6', '#e11d48', '#8b5cf6'];
 
 const budgetByCategory: Record<string, number> = {
@@ -43,6 +45,17 @@ export default function DashboardPage() {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [timeframe, setTimeframe] = useState('7D');
+
+  useEffect(() => {
+    const savedTimeframe = localStorage.getItem(TIMEFRAME_STORAGE_KEY);
+    if (savedTimeframe && timeframeDays[savedTimeframe]) {
+      setTimeframe(savedTimeframe);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(TIMEFRAME_STORAGE_KEY, timeframe);
+  }, [timeframe]);
 
   useEffect(() => {
     async function loadTransactions() {
