@@ -86,7 +86,7 @@ export default function DashboardPage() {
     { name: 'Actual', data: budgetCategories.map(c => categorySpend[c] ?? 0), color: '#f97316' },
   ], [categorySpend, budgetCategories]);
 
-  const dailyExpenseData = useMemo(() => {
+  const cumulativeExpenseData = useMemo(() => {
     const days = timeframeDays[timeframe];
     const today = new Date();
     const start = new Date();
@@ -275,7 +275,7 @@ export default function DashboardPage() {
                 {formatCurrency(Math.abs(expensesDelta))} {expensesDelta <= 0 ? '↓' : '↑'}({Math.abs(expensesPercentChange).toFixed(2)}%) vs previous period
               </p>
             </div>
-            <LineChart data={dailyExpenseData} />
+            <LineChart data={cumulativeExpenseData} />
           </Wrapper>
         </div>
 
