@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Button, Input, Wrapper, MultiSelect, NavIcon, DropDown } from '@/app/components/ui/ui'
 import StatCard from '../components/ui/statCard';
 import { useAuth } from '@/context/authContext'
@@ -45,6 +45,7 @@ export default function DashboardPage() {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [timeframe, setTimeframe] = useState('7D');
+  const isFirstTimeframeWrite = useRef(true);
 
   useEffect(() => {
     const savedTimeframe = localStorage.getItem(TIMEFRAME_STORAGE_KEY);
@@ -54,6 +55,10 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    if (isFirstTimeframeWrite.current) {
+      isFirstTimeframeWrite.current = false;
+      return;
+    }
     localStorage.setItem(TIMEFRAME_STORAGE_KEY, timeframe);
   }, [timeframe]);
 
