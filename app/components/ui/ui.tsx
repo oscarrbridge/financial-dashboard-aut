@@ -59,10 +59,11 @@ export function Input({
 type WrapperProps = {
 	children: React.ReactNode;
 	className?: string;
+	style?: React.CSSProperties;
 };
 
-export function Wrapper({ children, className = "" }: WrapperProps) {
-	return <div className={`custom-wrapper ${className}`}>{children}</div>;
+export function Wrapper({ children, className = "", style }: WrapperProps) {
+	return <div className={`custom-wrapper ${className}`} style={style}>{children}</div>;
 }
 
 type MultiSelectProps = {
@@ -134,5 +135,30 @@ export function DropDown({ options, onChange, value } : dropDownProps){
 				<option key={index} value={option}>{option}</option>
 			)) }
 		</select>
+	);
+}
+
+type InfoTooltipProps = {
+	text: string;
+};
+
+export function InfoTooltip({ text }: InfoTooltipProps) {
+	return (
+		<div className="info-tooltip">
+			<span className="info-tooltip-icon">?</span>
+			<span className="info-tooltip-text">{text}</span>
+		</div>
+	);
+}
+
+type NoDataProps = {
+	height?: number;
+};
+
+export function NoData({ height = 320 }: NoDataProps) {
+	return (
+		<div className="no-data" style={{ height }}>
+			No data available
+		</div>
 	);
 }

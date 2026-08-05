@@ -254,7 +254,7 @@ export default function DashboardPage() {
           <div className='flex flex-col gap-2 w-full'>
             <div><h2 className='font-semibold text-2xl'>Cash Flow</h2></div>
             <Wrapper className='w-full'>
-              <SankeyChart nodes={cashFlowData.nodes} links={cashFlowData.links} />
+              <SankeyChart nodes={cashFlowData.nodes} links={cashFlowData.links} height={320} />
             </Wrapper>
           </div>
         </div>
