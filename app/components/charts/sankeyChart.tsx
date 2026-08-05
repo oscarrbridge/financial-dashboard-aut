@@ -44,6 +44,7 @@ export default function SankeyChart({ nodes, links, height = 400 }: SankeyChartP
         emphasis: { focus: 'adjacency' },
         nodeWidth: 24,
         nodeGap: 16,
+        layoutIterations: 0,
         lineStyle: { color: 'gradient', curveness: 0.5, opacity: 0.6 },
         label: { color: '#fff', fontSize: 14 },
       }],
