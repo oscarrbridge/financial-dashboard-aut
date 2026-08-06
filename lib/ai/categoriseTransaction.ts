@@ -3,6 +3,7 @@ import { autoCategorizeTransaction } from "@/lib/firebase/transactions";
 import {
   getCategoriesForType,
   isValidCategoryForType,
+  describeCategory,
   type TransactionType,
 } from "@/lib/categories";
 
@@ -29,15 +30,16 @@ function buildSinglePrompt(
   description: string,
   type: TransactionType
 ): string {
-  const categories = getCategoriesForType(type);
+  const categories = getCategoriesForType(type).map(describeCategory);
 
   return `You are a transaction categorisation assistant for a personal finance app.
 Given a single bank transaction description and its type, choose the single best
 matching category from the allowed list. Respond with ONLY a JSON object of the
-exact form {"category": "<one of the allowed categories>"} and nothing else.
+exact form {"category": "<one of the allowed categories, name only>"} and nothing else.
 
 Transaction type: ${type}
-Allowed categories: ${JSON.stringify(categories)}
+Allowed categories (name and what it covers):
+${categories.map((category) => `- ${category}`).join("\n")}
 
 Transaction description: "${description}"
 
@@ -88,22 +90,33 @@ export async function categoriseTransaction(
 }
 
 function buildBatchPrompt(items: CategorisationItem[]): string {
-  const lines = items
-    .map((item, index) => {
-      const categories = getCategoriesForType(item.type);
-      return `${index}. type=${item.type}, allowed=${JSON.stringify(
-        categories
-      )}, description=${JSON.stringify(item.description)}`;
+  const typesUsed = Array.from(new Set(items.map((item) => item.type)));
+
+  const categoryLegend = typesUsed
+    .map((type) => {
+      const categories = getCategoriesForType(type).map(describeCategory);
+      return `${type} categories:\n${categories
+        .map((category) => `- ${category}`)
+        .join("\n")}`;
     })
+    .join("\n\n");
+
+  const lines = items
+    .map(
+      (item, index) =>
+        `${index}. type=${item.type}, description=${JSON.stringify(item.description)}`
+    )
     .join("\n");
 
   return `You are a transaction categorisation assistant for a personal finance app.
 You will be given a numbered list of bank transactions, each with a type
-(Expense, Income, or Debt) and the allowed categories for that type. For each
-transaction, choose the single best matching category from ITS allowed list.
+(Expense, Income, or Debt). For each transaction, choose the single best
+matching category from the allowed categories for ITS type, listed below.
+
+${categoryLegend}
 
 Respond with ONLY a JSON object of the exact form:
-{"results": [{"index": 0, "category": "<category>"}, {"index": 1, "category": "<category>"}, ...]}
+{"results": [{"index": 0, "category": "<category name only>"}, {"index": 1, "category": "<category name only>"}, ...]}
 Include exactly one entry per transaction, in any order, using the same "index"
 values given below. Do not include any text outside the JSON object.
 
@@ -178,7 +191,7 @@ async function categoriseChunk(
   });
 }
 
-const CHUNK_SIZE = 30;
+const CHUNK_SIZE = 20;
 
 export async function categoriseTransactionsBatch(
   items: CategorisationItem[],

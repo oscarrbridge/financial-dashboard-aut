@@ -50,10 +50,10 @@ describe("categoriseTransactionsBatch", () => {
     expect(categories).toEqual(["Groceries", "Wages"]);
   });
 
-  it("chunks at 30 items and reports progress via onChunkResult", async () => {
+  it("chunks at 20 items and reports progress via onChunkResult", async () => {
     mockedGenerate.mockResolvedValue(JSON.stringify({ results: [] }));
 
-    const items = Array.from({ length: 35 }, () => ({
+    const items = Array.from({ length: 25 }, () => ({
       description: "Weekly wage payment",
       type: "Income" as const,
     }));
@@ -62,7 +62,7 @@ describe("categoriseTransactionsBatch", () => {
     await categoriseTransactionsBatch(items, onChunkResult);
 
     expect(mockedGenerate).toHaveBeenCalledTimes(2);
-    expect(onChunkResult).toHaveBeenNthCalledWith(1, 0, Array(30).fill("Wages"));
-    expect(onChunkResult).toHaveBeenNthCalledWith(2, 30, Array(5).fill("Wages"));
+    expect(onChunkResult).toHaveBeenNthCalledWith(1, 0, Array(20).fill("Wages"));
+    expect(onChunkResult).toHaveBeenNthCalledWith(2, 20, Array(5).fill("Wages"));
   });
 });
