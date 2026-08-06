@@ -1,67 +1,208 @@
 "use client";
 
-import { useState } from "react";
-import { FaTrash } from "react-icons/fa";
+import { useEffect, useState } from "react";
+import { requireAuth } from "@/lib/firebase/requireAuth";
+import {
+  getUserBudgets,
+  saveBudgetToFirestore,
+  initializeDefaultBudgets,
+  EXPENSE_CATEGORIES,
+  type BudgetPeriod,
+} from "@/lib/firebase/budgets";
+import { getUserTransactions, type Transaction } from "@/lib/firebase/transactions";
+
+interface BudgetDisplay {
+  name: string;
+  spent: number;
+  limit: number;
+  period: BudgetPeriod;
+}
 
 export default function BudgetPage() {
-  const [categories, setCategories] = useState([
-    { name: "Groceries", spent: 200, limit: 300 },
-    { name: "Transport", spent: 200, limit: 150 },
-    { name: "Entertainment", spent: 104, limit: 200 },
-  ]);
+  const [categories, setCategories] = useState<BudgetDisplay[]>([]);
+  const [budgetPeriod, setBudgetPeriod] = useState<BudgetPeriod>("Monthly");
+  const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [editLimits, setEditLimits] = useState<Record<string, number>>({});
+  const { user } = requireAuth();
 
-  const [newCategory, setNewCategory] = useState("");
-  const [newLimit, setNewLimit] = useState("");
-  const [newSpent, setNewSpent] = useState("");
-  const [budgetPeriod, setBudgetPeriod] = useState("Monthly");
+  // Get transactions from last 7 days only
+  const getLastWeekTransactions = (transactions: Transaction[]): Transaction[] => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    return transactions.filter((transaction) => {
+      const transactionDate = new Date(transaction.date);
+      return transactionDate >= sevenDaysAgo;
+    });
+  };
 
-  const totalBudget = categories.reduce(
-    (total, category) => total + category.limit,
-    0
-  );
+  // Calculate spent amount for a category based on transactions from last 7 days
+  const calculateCategorySpent = (
+    categoryName: string,
+    transactions: Transaction[]
+  ): number => {
+    const weekTransactions = getLastWeekTransactions(transactions);
+    return weekTransactions
+      .filter(
+        (transaction) =>
+          transaction.type === "Expense" && transaction.category === categoryName
+      )
+      .reduce((total, transaction) => total + transaction.amount, 0);
+  };
+
+  // Load budgets and transactions on mount
+  useEffect(() => {
+    if (!user) return;
+
+    async function loadBudgetsData() {
+      try {
+        setLoading(true);
+
+        // Initialize default budgets if none exist
+        await initializeDefaultBudgets(user!.uid);
+
+        // Load saved budgets
+        const savedBudgets = await getUserBudgets(user!.uid);
+
+        // Load transactions to calculate spending
+        const transactions = await getUserTransactions(user!.uid);
+
+        // Create budget display with actual spending data
+        const budgetDisplays: BudgetDisplay[] = EXPENSE_CATEGORIES.map(
+          (categoryName) => {
+            const savedBudget = savedBudgets.find(
+              (b) => b.category === categoryName
+            );
+            const spent = calculateCategorySpent(categoryName, transactions);
+
+            return {
+              name: categoryName,
+              spent,
+              limit: savedBudget?.limit ?? 0,
+              period: "Weekly",
+            };
+          }
+        );
+
+        setCategories(budgetDisplays);
+        
+        // Initialize edit limits with current values
+        const initialLimits: Record<string, number> = {};
+        budgetDisplays.forEach((cat) => {
+          initialLimits[cat.name] = cat.limit;
+        });
+        setEditLimits(initialLimits);
+      } catch (error) {
+        console.error("Error loading budgets:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadBudgetsData();
+  }, [user]);
+
 
   const totalSpent = categories.reduce(
     (total, category) => total + category.spent,
     0
   );
 
-  const remainingBudget = totalBudget - totalSpent;
 
   const alerts = categories
-  .filter(
-    (category) =>
-      category.spent > category.limit ||
-      category.spent > category.limit * 0.8
-  )
-  .sort(
-    (a, b) =>
-      b.spent / b.limit - a.spent / a.limit
-  );
+    .filter(
+      (category) =>
+        category.limit > 0 &&
+        (category.spent > category.limit ||
+          category.spent > category.limit * 0.8)
+    )
+    .sort((a, b) => b.spent / b.limit - a.spent / a.limit);
 
-  function addCategory() {
-    if (!newCategory || !newLimit) return;
 
-    setCategories([
-      ...categories,
-      {
-        name: newCategory,
-        spent: Number(newSpent),
-        limit: Number(newLimit),
-      },
-    ]);
 
-    setNewCategory("");
-    setNewLimit("");
-    setNewSpent("");
+  const handleSaveAllBudgets = async () => {
+    if (!user) return;
+
+    try {
+      // Save only budgets that were actually changed
+      for (const category of EXPENSE_CATEGORIES) {
+        const newLimit = editLimits[category] ?? 0;
+        const originalLimit = categories.find(c => c.name === category)?.limit ?? 0;
+        
+        // Only save if the limit actually changed
+        if (newLimit !== originalLimit) {
+          await saveBudgetToFirestore(user.uid, {
+            category,
+            limit: newLimit,
+          });
+        }
+      }
+
+      // Update local state
+      const updatedCategories = categories.map((cat) => ({
+        ...cat,
+        limit: editLimits[cat.name] ?? 0,
+      }));
+      setCategories(updatedCategories);
+      setEditMode(false);
+    } catch (error) {
+      console.error("Error saving budgets:", error);
+    }
+  };
+
+  const getPeriodLabel = (): string => {
+    return budgetPeriod.charAt(0).toUpperCase() + budgetPeriod.slice(1);
+  };
+
+  const getPeriodDays = (): number => {
+    if (budgetPeriod === "Weekly") return 7;
+    if (budgetPeriod === "Fortnightly") return 14;
+    if (budgetPeriod === "Monthly") return 30;
+    return 7;
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-background text-text px-12 py-10">
+        <p className="text-inactive-text">Loading budgets...</p>
+      </main>
+    );
   }
+
+  // Convert weekly limit to display based on selected period
+  const convertFromWeekly = (weeklyLimit: number, period: BudgetPeriod): number => {
+    if (period === "Weekly") return weeklyLimit;
+    if (period === "Fortnightly") return weeklyLimit * 2;
+    if (period === "Monthly") return (weeklyLimit / 7) * 30;
+    return weeklyLimit;
+  };
 
   return (
     <main className="min-h-screen bg-background text-text px-12 py-10 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold">Budgets</h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Budgets</h1>
+          <p className="mt-2 text-inactive-text">
+            Manage your budget limits and spending alerts.
+          </p>
+        </div>
 
-      <p className="mt-2 text-inactive-text">
-        Manage your budget limits and spending alerts.
-      </p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-inactive-text">View as:</p>
+          <select
+            value={budgetPeriod}
+            onChange={(event) =>
+              setBudgetPeriod(event.target.value as BudgetPeriod)
+            }
+            className="bg-widget border border-zinc-700 px-4 py-2 rounded-lg outline-none font-semibold"
+          >
+            <option>Weekly</option>
+            <option>Fortnightly</option>
+            <option>Monthly</option>
+          </select>
+        </div>
+      </div>
 
       {alerts.length > 0 && (
         <div className="mt-6 bg-red-950 border border-red-800 text-red-300 px-4 py-3 rounded-xl flex items-center justify-between">
@@ -78,46 +219,41 @@ export default function BudgetPage() {
         </div>
       )}
 
-      <div className="flex items-center gap-3 mt-10 mb-4">
-        <h2 className="text-2xl font-semibold">
-          Budget Overview
-        </h2>
-
-        <span className="bg-secondary text-inactive-text text-xs px-3 py-1 rounded-full self-center">
-          {budgetPeriod}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mt-10">
         <div className="bg-widget p-6 rounded-2xl border border-zinc-800 hover:border-zinc-600 hover:-translate-y-1 transition-all duration-200 shadow-lg">
-          <h2 className="text-inactive-text text-sm">Total Budget</h2>
+          <h2 className="text-inactive-text text-sm">{getPeriodLabel()} Budget</h2>
 
           <p className="text-3xl font-bold mt-2">
-            ${totalBudget}
+            ${categories
+              .reduce((total, category) => total + convertFromWeekly(category.limit, budgetPeriod), 0)
+              .toFixed(2)}
           </p>
 
           <p className="text-sm text-inactive-text mt-2">
-            Monthly planned spending
+            Planned spending across all categories
           </p>
         </div>
 
         <div className="bg-widget p-6 rounded-2xl border border-zinc-800 hover:border-zinc-600 hover:-translate-y-1 transition-all duration-200 shadow-lg">
-          <h2 className="text-inactive-text text-sm">Total Spent</h2>
+          <h2 className="text-inactive-text text-sm">{getPeriodLabel()} Spent</h2>
 
           <p className="text-3xl font-bold mt-2">
-            ${totalSpent}
+            ${convertFromWeekly(totalSpent, budgetPeriod).toFixed(2)}
           </p>
 
           <p className="text-sm text-inactive-text mt-2">
-            Current expenses tracked
+            Current expenses tracked (last {getPeriodDays()} days)
           </p>
         </div>
 
         <div className="bg-widget p-6 rounded-2xl border border-zinc-800 hover:border-zinc-600 hover:-translate-y-1 transition-all duration-200 shadow-lg">
-          <h2 className="text-inactive-text text-sm">Remaining</h2>
+          <h2 className="text-inactive-text text-sm">{getPeriodLabel()} Remaining</h2>
 
           <p className="text-3xl font-bold mt-2">
-            ${remainingBudget}
+            ${(convertFromWeekly(
+              categories.reduce((total, category) => total + category.limit, 0) - totalSpent,
+              budgetPeriod
+            )).toFixed(2)}
           </p>
 
           <p className="text-sm text-inactive-text mt-2">
@@ -126,205 +262,161 @@ export default function BudgetPage() {
         </div>
       </div>
 
+      {alerts.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-2xl font-semibold mb-4">Budget Alerts</h2>
+          <div className="bg-widget p-6 rounded-lg border border-zinc-800 space-y-3">
+            {alerts.map((category) => (
+              <div
+                key={category.name}
+                className="bg-secondary p-4 rounded-lg flex items-center justify-between border border-zinc-800"
+              >
+                <p className="text-sm">
+                  {category.spent > category.limit
+                    ? `${category.name} budget has been exceeded by $${(
+                        category.spent - category.limit
+                      ).toFixed(2)}.`
+                    : `${category.name} has reached ${Math.round(
+                        (category.spent / category.limit) * 100
+                      )}% of its budget.`}
+                </p>
+
+                <span
+                  className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                    category.spent > category.limit
+                      ? "bg-red-500"
+                      : "bg-orange-400"
+                  }`}
+                ></span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-10">
-      <div className="max-w-5xl">
-        <div className="flex items-center gap-3 mt-6 mb-4">
-          <p className="text-sm text-inactive-text">
-            Budget period:
-          </p>
-
-          <select
-            value={budgetPeriod}
-            onChange={(event) => setBudgetPeriod(event.target.value)}
-            className="bg-widget border border-zinc-700 px-3 py-2 rounded-lg outline-none"
-          >
-            <option>Weekly</option>
-            <option>Fortnightly</option>
-            <option>Monthly</option>
-          </select>
-        </div>
-      </div>
-
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-semibold">
-            Budget Categories
-          </h2>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-semibold">Budget Categories</h2>
+            <p className="text-sm text-inactive-text mt-1">Weekly budgets for each category</p>
+          </div>
+          
+          {!editMode && (
+            <button
+              onClick={() => setEditMode(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Edit Budgets
+            </button>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-          <section className="bg-widget p-6 rounded-lg border border-zinc-800 h-full">
-            <div className="grid grid-cols-2 gap-4 border-b border-zinc-800 pb-3">
-              <h3 className="text-2xl font-bold">
-                Category
-              </h3>
-
-              <h3 className="text-2xl font-bold">
-                Budget Limit
-              </h3>
+        {editMode ? (
+          // Edit Mode
+          <div className="bg-widget p-6 rounded-lg border border-zinc-800">
+            <div className="space-y-4">
+              {categories.map((category) => (
+                <div
+                  key={category.name}
+                  className="border-b border-zinc-800 pb-4 last:border-b-0"
+                >
+                  <div className="flex items-end justify-between gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm text-inactive-text mb-2">
+                        {category.name}
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="10"
+                          value={editLimits[category.name] ?? 0}
+                          onChange={(e) =>
+                            setEditLimits({
+                              ...editLimits,
+                              [category.name]: Number(e.target.value) || 0,
+                            })
+                          }
+                          className="bg-secondary border border-zinc-700 px-3 py-2 rounded text-white outline-none w-24"
+                        />
+                        <span className="text-sm text-inactive-text">/ week</span>
+                      </div>
+                      <p className="text-xs text-inactive-text mt-2">
+                        Spent this week: ${category.spent.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
 
+            <div className="flex gap-3 mt-6 pt-6 border-t border-zinc-800">
+              <button
+                onClick={handleSaveAllBudgets}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg transition-colors font-semibold"
+              >
+                Save All
+              </button>
+              <button
+                onClick={() => setEditMode(false)}
+                className="flex-1 bg-secondary border border-zinc-700 hover:border-zinc-600 text-white py-2 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          // View Mode
+          <section className="bg-widget p-6 rounded-lg border border-zinc-800">
+            <div className="space-y-4">
               {categories.length === 0 ? (
-                <div className="py-8 text-center text-inactive-text border-b border-zinc-800">
+                <div className="py-8 text-center text-inactive-text">
                   <p>No budget categories yet.</p>
-
-                  <p className="text-sm mt-1">
-                    Add a category to start managing your budget.
-                  </p>
                 </div>
               ) : (
                 categories.map((category) => (
-              <div
-                key={category.name}
-                className="border-b border-zinc-800 py-4"
-              >
-                <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-center">
-                  <p>{category.name}</p>
-
-                  <div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="500"
-                      value={category.spent || 0}
-                      onChange={(event) => {
-                        const updatedCategories = categories.map((item) =>
-                          item.name === category.name
-                            ? {
-                                ...item,
-                                spent: Number(event.target.value) || 0,
-                              }
-                            : item
-                        );
-
-                        setCategories(updatedCategories);
-                      }}
-                      className="w-full accent-white cursor-pointer"
-                    />
-
-                    <div className="flex justify-between text-[11px] text-inactive-text mt-2 gap-4">
-                        <span>Spent: ${category.spent}</span>
-
-                        <span>Budget: ${category.limit}</span>
-                      </div>
-
-                    <div className="w-full bg-zinc-800 rounded-full h-2 mt-4">
-                      <div
-                        className={`h-2 rounded-full transition-all duration-500 ${
-                          category.spent > category.limit
-                            ? "bg-red-500"
-                            : category.spent > category.limit * 0.8
-                            ? "bg-orange-400"
-                            : "bg-green-500"
-                        }`}
-                        style={{
-                          width: `${Math.min(
-                            (category.spent / category.limit) * 100,
-                            100
-                          )}%`,
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      const updatedCategories = categories.filter(
-                        (item) => item.name !== category.name
-                      );
-
-                      setCategories(updatedCategories);
-                    }}
-                    className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-lg hover:bg-red-500/20 transition-all duration-200"
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
-              </div>
-            ))
-            )}
-
-            <div className="mt-6 bg-secondary p-4 rounded-xl border border-zinc-800">
-              <h4 className="font-semibold mb-3">
-                Add New Category
-              </h4>
-
-              <div className="flex flex-col gap-3">
-                <input
-                  type="text"
-                  value={newCategory}
-                  onChange={(event) =>
-                    setNewCategory(event.target.value)
-                  }
-                  placeholder="Category"
-                  className="bg-widget border border-zinc-700 px-4 py-3 rounded-xl outline-none focus:border-zinc-500 transition-all duration-200"
-                />
-
-                <input
-                  type="number"
-                  value={newLimit}
-                  onChange={(event) =>
-                    setNewLimit(event.target.value)
-                  }
-                  placeholder="Limit"
-                  className="bg-widget border border-zinc-700 px-4 py-3 rounded-xl outline-none focus:border-zinc-500 transition-all duration-200"
-                />
-
-                <input
-                  type="number"
-                  value={newSpent}
-                  onChange={(event) =>
-                    setNewSpent(event.target.value)
-                  }
-                  placeholder="Amount"
-                  className="bg-widget border border-zinc-700 px-4 py-3 rounded-xl outline-none focus:border-zinc-500 transition-all duration-200"
-                />
-              </div>
-              <button
-                onClick={addCategory}
-                className="mt-4 bg-widget border border-zinc-700 px-4 py-2 rounded-lg hover:bg-zinc-800 hover:scale-105 transition-all duration-200"
-              >
-                + Add Category
-              </button>
-            </div>
-          </section>
-
-          <section className="bg-widget p-6 rounded-lg border border-zinc-800 min-h-[440px] overflow-y-auto">
-            <h3 className="text-2xl font-bold mb-4">
-              Budget Alerts
-            </h3>
-
-            <div className="space-y-4">
-              {alerts.length > 0 ? (
-                alerts.map((category) => (
                   <div
                     key={category.name}
-                    className="bg-secondary p-4 rounded-xl flex items-center justify-between border border-zinc-800 hover:border-zinc-600 transition-all duration-200"
+                    className="border-b border-zinc-800 pb-4 last:border-b-0"
                   >
-                    <p className="text-sm">
-                      {category.spent > category.limit
-                        ? `${category.name} budget has been exceeded.`
-                        : `${category.name} has reached 80% of its budget.`}
-                    </p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-semibold">{category.name}</p>
+                      <p className="text-sm font-bold">${category.limit} / week</p>
+                    </div>
 
-                    <span
-                      className={`w-3 h-3 rounded-full ${
-                        category.spent > category.limit
-                          ? "bg-red-500"
-                          : "bg-orange-400"
-                      }`}
-                    ></span>
+                    <div className="flex justify-between text-xs text-inactive-text mb-3">
+                      <span>Spent this week: ${category.spent.toFixed(2)}</span>
+                      {category.limit > 0 && (
+                        <span>{Math.round((category.spent / category.limit) * 100)}% of budget</span>
+                      )}
+                    </div>
+
+                    {category.limit > 0 && (
+                      <div className="w-full bg-zinc-800 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-500 ${
+                            category.spent > category.limit
+                              ? "bg-red-500"
+                              : category.spent > category.limit * 0.8
+                              ? "bg-orange-400"
+                              : "bg-green-500"
+                          }`}
+                          style={{
+                            width: `${Math.min(
+                              (category.spent / category.limit) * 100,
+                              100
+                            )}%`,
+                          }}
+                        ></div>
+                      </div>
+                    )}
                   </div>
                 ))
-              ) : (
-                <div className="bg-secondary p-4 rounded-xl border border-zinc-800">
-                  <p className="text-sm text-inactive-text">
-                    No active budget alerts.
-                  </p>
-                </div>
               )}
             </div>
           </section>
-        </div>
+        )}
       </div>
     </main>
   );
