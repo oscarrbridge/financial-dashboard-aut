@@ -97,24 +97,9 @@ export default function DashboardPage() {
     return totals;
   }, [filteredTransactions]);
 
-  const topSpendingCategory = useMemo(() => {
-  let topCategory = '';
-  let maxSpend = 0;
 
-  Object.entries(categorySpend).forEach(([category, amount]) => {
-    if (amount > maxSpend) {
-      maxSpend = amount;
-      topCategory = category;
-    }
-  });
 
-  return { category: topCategory, amount: maxSpend };
-}, [categorySpend]);
 
-  const savingsRate = useMemo(() => {
-    const savingRates = stats.income > 0 ? ((stats.income - stats.expenses) / stats.income) * 100 : 0;
-    return savingRates;
-  }, [stats.income, stats.expenses]);
   
   const savingsProjection = useMemo(() => {
     const days = timeframeDays[timeframe];
@@ -276,6 +261,7 @@ export default function DashboardPage() {
     { name: 'Expenses', data: weeklyIncomeExpense.map(w => w.expenses), color: '#f87171' },
   ], [weeklyIncomeExpense]);
 
+
   return (
     <div className='flex flex-col w-full h-full p-6 gap-5'>
       <div className='w-full flex justify-end'>
@@ -288,12 +274,11 @@ export default function DashboardPage() {
       </div>
 
       <div className='flex flex-row w-full justify-between gap-5'>
-        
         <StatCard title="Balance" value={formatCurrency(stats.balance)}/>
         <StatCard title="Income" value={formatCurrency(stats.income)}/>
         <StatCard title="Expenses" value={formatCurrency(stats.expenses)}/>
         <StatCard title="Surplus" value={formatCurrency(stats.surplus)}/>
-      
+        <StatCard title="Debt" value={formatCurrency(stats.debt)}/>
       </div>
 
         <div className='flex flex-col gap-2 w-full'>
@@ -301,15 +286,15 @@ export default function DashboardPage() {
           <Wrapper className='w-full'>
             <div className='w-full text-left'>
               <p className='text-xl'>
-                Top spending category: {topSpendingCategory.category
-                  ? `${topSpendingCategory.category} (${formatCurrency(topSpendingCategory.amount)})`
+                Top spending category: {stats.topCategory
+                  ? `${stats.topCategory} (${formatCurrency(stats.topCategoryAmount)})`
                   : 'No expense data available for this period'}
               </p>
             </div>
             <div className='w-full text-left'>
               <p className='text-xl'>
                 Savings rate: {stats.income > 0
-                  ? `${savingsRate.toFixed(2)}%`
+                  ? `${stats.savingsRate.toFixed(2)}%`
                   : 'No income data available for this period'}
               </p>
             </div>
