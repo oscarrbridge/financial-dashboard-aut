@@ -61,6 +61,8 @@ export async function categoriseTransaction(
   description: string,
   type: TransactionType
 ): Promise<string> {
+  const startedAt = Date.now();
+
   try {
     const raw = await generateAIResponse(buildSinglePrompt(description, type), {
       format: "json",
@@ -68,11 +70,18 @@ export async function categoriseTransaction(
     const parsed = parseAIJson(raw);
     const category = extractSingleCategory(parsed);
 
+    console.log(
+      `[categoriseTransaction] "${description}" resolved in ${Date.now() - startedAt}ms -> ${category ?? "(invalid response)"}`
+    );
+
     if (category !== null && isValidCategoryForType(category, type)) {
       return category.trim();
     }
-  } catch {
-    // fall through to keyword fallback
+  } catch (error) {
+    console.log(
+      `[categoriseTransaction] "${description}" failed after ${Date.now() - startedAt}ms:`,
+      error
+    );
   }
 
   return autoCategorizeTransaction(description, type);
@@ -136,14 +145,25 @@ function extractBatchResults(parsed: unknown): Map<number, string> | null {
 async function categoriseChunk(
   chunk: CategorisationItem[]
 ): Promise<string[]> {
+  const startedAt = Date.now();
   let resultsByIndex: Map<number, string> | null = null;
+
+  console.log(`[categoriseChunk] sending ${chunk.length} transaction(s) to the AI...`);
 
   try {
     const raw = await generateAIResponse(buildBatchPrompt(chunk), {
       format: "json",
     });
     resultsByIndex = extractBatchResults(parseAIJson(raw));
-  } catch {
+
+    console.log(
+      `[categoriseChunk] resolved ${chunk.length} transaction(s) in ${Date.now() - startedAt}ms (${resultsByIndex ? resultsByIndex.size : 0} valid entries)`
+    );
+  } catch (error) {
+    console.log(
+      `[categoriseChunk] failed after ${Date.now() - startedAt}ms:`,
+      error
+    );
     resultsByIndex = null;
   }
 

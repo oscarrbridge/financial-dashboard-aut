@@ -177,6 +177,8 @@ export default function CsvUpload({ onConfirmImport }: CsvUploadProps)  {
   }
 
   function confirmImport() {
+    if (isCategorising) return;
+
     onConfirmImport(transactions);
     setTransactions([]);
     setErrors([]);
@@ -329,9 +331,14 @@ export default function CsvUpload({ onConfirmImport }: CsvUploadProps)  {
                 <button
                   type="button"
                   onClick={confirmImport}
-                  style={confirmButtonStyle}
+                  disabled={isCategorising}
+                  style={
+                    isCategorising
+                      ? { ...confirmButtonStyle, opacity: 0.6, cursor: "not-allowed" }
+                      : confirmButtonStyle
+                  }
                 >
-                  Confirm Import
+                  {isCategorising ? "Categorising transactions..." : "Confirm Import"}
                 </button>
               </section>
             ) : (
