@@ -3,7 +3,12 @@
 import { useRef, useState } from "react";
 import Papa from "papaparse";
 import { Button } from "@/app/components/ui/ui";
-import { autoCategorizeTransaction } from "@/lib/firebase/transactions";
+import { categoriseTransactionsBatch } from "@/lib/ai/categoriseTransaction";
+import {
+  INCOME_CATEGORIES,
+  EXPENSE_CATEGORIES,
+  DEBT_CATEGORIES,
+} from "@/lib/categories";
 
 type TransactionType = "Income" | "Expense" | "Debt";
 
@@ -14,6 +19,8 @@ type ImportedTransaction = {
   description: string;
   amount: number;
 };
+
+const CATEGORISING_PLACEHOLDER = "Categorising...";
 
 const dateHeaders = ["Date", "Transaction Date", "Posted Date"];
 
@@ -31,34 +38,6 @@ const debitHeaders = ["Debit", "Withdrawals"];
 
 const creditHeaders = ["Credit", "Deposits"];
 
-const incomeSourceOptions = [
-  "Wages",
-  "Scholarship",
-  "Student Allowance",
-  "Family Support",
-  "Other Income",
-];
-
-const expenseSourceOptions = [
-  "Accommodation",
-  "Utilities",
-  "Transport",
-  "Groceries",
-  "Entertainment",
-  "Education",
-  "Personal Care",
-  "Food & Dining",
-  "Other Expense",
-  
-];
-
-const debtSourceOptions = [
-  "Student Loan",
-  "Credit Card",
-  "Personal Loan",
-  "Other Debt",
-];
-
 type CsvUploadProps = {
   onConfirmImport: (transactions: ImportedTransaction[]) => void;
 };
@@ -67,6 +46,7 @@ export default function CsvUpload({ onConfirmImport }: CsvUploadProps)  {
   const [transactions, setTransactions] = useState<ImportedTransaction[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCategorising, setIsCategorising] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   function handleCsvUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -98,16 +78,21 @@ export default function CsvUpload({ onConfirmImport }: CsvUploadProps)  {
           return;
         }
 
-        const imported: ImportedTransaction[] = [];
+        const parsedRows: {
+          date: string;
+          type: TransactionType;
+          description: string;
+          amount: number;
+        }[] = [];
         let invalidRowCount = 0;
 
         results.data.forEach((row) => {
-          const transaction = convertCsvRowToTransaction(row);
+          const parsedRow = parseCsvRow(row);
 
-          if (!transaction) {
+          if (!parsedRow) {
             invalidRowCount++;
           } else {
-            imported.push(transaction);
+            parsedRows.push(parsedRow);
           }
         });
 
@@ -121,9 +106,46 @@ export default function CsvUpload({ onConfirmImport }: CsvUploadProps)  {
           );
         }
 
+        const imported: ImportedTransaction[] = parsedRows.map((row) => ({
+          ...row,
+          source: CATEGORISING_PLACEHOLDER,
+        }));
+
         setTransactions(imported);
         setErrors(errorMessages);
         setIsModalOpen(true);
+
+        if (parsedRows.length > 0) {
+          setIsCategorising(true);
+
+          categoriseTransactionsBatch(
+            parsedRows.map((row) => ({
+              description: row.description,
+              type: row.type,
+            })),
+            (chunkStartIndex, categories) => {
+              setTransactions((currentTransactions) =>
+                currentTransactions.map((transaction, index) => {
+                  if (
+                    index < chunkStartIndex ||
+                    index >= chunkStartIndex + categories.length
+                  ) {
+                    return transaction;
+                  }
+
+                  if (transaction.source !== CATEGORISING_PLACEHOLDER) {
+                    return transaction;
+                  }
+
+                  return {
+                    ...transaction,
+                    source: categories[index - chunkStartIndex],
+                  };
+                })
+              );
+            }
+          ).finally(() => setIsCategorising(false));
+        }
 
         // Allows the same CSV file to be selected again if needed
         event.target.value = "";
@@ -163,14 +185,14 @@ export default function CsvUpload({ onConfirmImport }: CsvUploadProps)  {
 
   function getSourceOptionsByType(type: TransactionType) {
     if (type === "Income") {
-      return incomeSourceOptions;
+      return INCOME_CATEGORIES;
     }
 
     if (type === "Debt") {
-      return debtSourceOptions;
+      return DEBT_CATEGORIES;
     }
 
-    return expenseSourceOptions;
+    return EXPENSE_CATEGORIES;
   }
 
   return (
@@ -187,9 +209,10 @@ export default function CsvUpload({ onConfirmImport }: CsvUploadProps)  {
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="w-full bg-white text-black py-3 rounded-lg font-bold"
+        disabled={isCategorising}
+        className="w-full bg-white text-black py-3 rounded-lg font-bold disabled:opacity-60"
       >
-        CSV Import
+        {isCategorising ? "Categorising..." : "CSV Import"}
       </button>
 
       {isModalOpen && (
@@ -256,24 +279,30 @@ export default function CsvUpload({ onConfirmImport }: CsvUploadProps)  {
                           <td style={tableCellStyle}>{transaction.type}</td>
 
                           <td style={tableCellStyle}>
-                            <select
-                              value={transaction.source}
-                              onChange={(event) =>
-                                updateTransactionSource(
-                                  index,
-                                  event.target.value
-                                )
-                              }
-                              style={selectStyle}
-                            >
-                              {getSourceOptionsByType(transaction.type).map(
-                                (source) => (
-                                  <option key={source} value={source}>
-                                    {source}
-                                  </option>
-                                )
-                              )}
-                            </select>
+                            {transaction.source === CATEGORISING_PLACEHOLDER ? (
+                              <span style={categorisingTextStyle}>
+                                {CATEGORISING_PLACEHOLDER}
+                              </span>
+                            ) : (
+                              <select
+                                value={transaction.source}
+                                onChange={(event) =>
+                                  updateTransactionSource(
+                                    index,
+                                    event.target.value
+                                  )
+                                }
+                                style={selectStyle}
+                              >
+                                {getSourceOptionsByType(transaction.type).map(
+                                  (source) => (
+                                    <option key={source} value={source}>
+                                      {source}
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            )}
                           </td>
 
                           <td style={tableCellStyle}>
@@ -346,9 +375,12 @@ function hasMatchingHeader(csvHeaders: string[], possibleHeaders: string[]) {
   );
 }
 
-function convertCsvRowToTransaction(
-  row: Record<string, string>
-): ImportedTransaction | null {
+function parseCsvRow(row: Record<string, string>): {
+  date: string;
+  type: TransactionType;
+  description: string;
+  amount: number;
+} | null {
   const date = getValue(row, dateHeaders);
 
   const description = getValue(row, descriptionHeaders);
@@ -360,12 +392,10 @@ function convertCsvRowToTransaction(
   }
 
   const type = classifyTransactionType(amount, description);
-  const source = autoCategorizeTransaction(description, type);
 
   return {
     date,
     type,
-    source,
     description,
     amount,
   };
@@ -547,6 +577,12 @@ const selectStyle: React.CSSProperties = {
   borderRadius: "6px",
   backgroundColor: "white",
   color: "black",
+};
+
+const categorisingTextStyle: React.CSSProperties = {
+  color: "#888",
+  fontStyle: "italic",
+  fontSize: "13px",
 };
 
 const actionCellStyle: React.CSSProperties = {

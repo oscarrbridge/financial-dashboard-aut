@@ -6,7 +6,7 @@ import {
   type TransactionType,
 } from "@/lib/categories";
 
-export type CategorizationItem = {
+export type CategorisationItem = {
   description: string;
   type: TransactionType;
 };
@@ -31,7 +31,7 @@ function buildSinglePrompt(
 ): string {
   const categories = getCategoriesForType(type);
 
-  return `You are a transaction categorization assistant for a personal finance app.
+  return `You are a transaction categorisation assistant for a personal finance app.
 Given a single bank transaction description and its type, choose the single best
 matching category from the allowed list. Respond with ONLY a JSON object of the
 exact form {"category": "<one of the allowed categories>"} and nothing else.
@@ -57,7 +57,7 @@ function extractSingleCategory(parsed: unknown): string | null {
   return null;
 }
 
-export async function categorizeTransaction(
+export async function categoriseTransaction(
   description: string,
   type: TransactionType
 ): Promise<string> {
@@ -78,7 +78,7 @@ export async function categorizeTransaction(
   return autoCategorizeTransaction(description, type);
 }
 
-function buildBatchPrompt(items: CategorizationItem[]): string {
+function buildBatchPrompt(items: CategorisationItem[]): string {
   const lines = items
     .map((item, index) => {
       const categories = getCategoriesForType(item.type);
@@ -88,7 +88,7 @@ function buildBatchPrompt(items: CategorizationItem[]): string {
     })
     .join("\n");
 
-  return `You are a transaction categorization assistant for a personal finance app.
+  return `You are a transaction categorisation assistant for a personal finance app.
 You will be given a numbered list of bank transactions, each with a type
 (Expense, Income, or Debt) and the allowed categories for that type. For each
 transaction, choose the single best matching category from ITS allowed list.
@@ -133,8 +133,8 @@ function extractBatchResults(parsed: unknown): Map<number, string> | null {
   return map;
 }
 
-async function categorizeChunk(
-  chunk: CategorizationItem[]
+async function categoriseChunk(
+  chunk: CategorisationItem[]
 ): Promise<string[]> {
   let resultsByIndex: Map<number, string> | null = null;
 
@@ -160,15 +160,15 @@ async function categorizeChunk(
 
 const CHUNK_SIZE = 30;
 
-export async function categorizeTransactionsBatch(
-  items: CategorizationItem[],
+export async function categoriseTransactionsBatch(
+  items: CategorisationItem[],
   onChunkResult?: (chunkStartIndex: number, categories: string[]) => void
 ): Promise<string[]> {
   const results: string[] = [];
 
   for (let i = 0; i < items.length; i += CHUNK_SIZE) {
     const chunk = items.slice(i, i + CHUNK_SIZE);
-    const chunkResults = await categorizeChunk(chunk);
+    const chunkResults = await categoriseChunk(chunk);
 
     onChunkResult?.(i, chunkResults);
     results.push(...chunkResults);

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Pencil, Trash2, Filter } from "lucide-react";
 import CsvUpload from "../../components/csvUpload";
 import { requireAuth } from "@/lib/firebase/requireAuth";
-import { autoCategorizeTransaction } from "@/lib/firebase/transactions";
+import { categoriseTransaction } from "@/lib/ai/categoriseTransaction";
 import {
   matchesTransactionFilter,
   normalizeCsvDate,
@@ -19,6 +19,7 @@ import {
 } from "@/lib/firebase/transactions";
 
 import { formatCurrency } from '@/lib/transactions/formatCurrency';
+import { CATEGORIES_BY_TYPE } from "@/lib/categories";
 
 type TransactionType = "Expense" | "Income" | "Debt";
 
@@ -32,27 +33,7 @@ type Transaction = {
   source?: "manual" | "csv";
 };
 
-const categoryOptions: Record<TransactionType, string[]> = {
-  Expense: [
-    "Accommodation",
-    "Utilities",
-    "Transport",
-    "Groceries",
-    "Entertainment",
-    "Education",
-    "Personal Care",
-    "Food & Dining",
-    "Other Expense",
-  ],
-  Income: [
-    "Wages",
-    "Scholarship",
-    "Student Allowance",
-    "Family Support",
-    "Other Income",
-  ],
-  Debt: ["Student Loan", "Credit Card", "Personal Loan", "Other Debt"],
-};
+const categoryOptions = CATEGORIES_BY_TYPE;
 
 export default function TransactionsPage() {
   const { user, loading } = requireAuth();
@@ -82,6 +63,7 @@ export default function TransactionsPage() {
   const [category, setCategory] = useState("");
   const [transactionDate, setTransactionDate] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isCategorising, setIsCategorising] = useState(false);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
@@ -151,6 +133,7 @@ export default function TransactionsPage() {
     setTransactionType("Expense");
     setEditingIndex(null);
     setErrorMessage("");
+    setIsCategorising(false);
   };
 
   const addTransaction = async () => {
@@ -179,34 +162,39 @@ export default function TransactionsPage() {
     }
 
     setErrorMessage("");
+    setIsCategorising(true);
 
-    const selectedCategory =
-      category === ""
-        ? autoCategorizeTransaction(description, transactionType)
-        : category;
+    try {
+      const selectedCategory =
+        category === ""
+          ? await categoriseTransaction(description, transactionType)
+          : category;
 
-    const newTransaction: Transaction = {
-      description,
-      amount: Number(amount),
-      category: selectedCategory,
-      date: transactionDate,
-      type: transactionType,
-      source: "manual",
-    };
+      const newTransaction: Transaction = {
+        description,
+        amount: Number(amount),
+        category: selectedCategory,
+        date: transactionDate,
+        type: transactionType,
+        source: "manual",
+      };
 
-    const newTransactionId = await addTransactionToFirestore(
-      user.uid,
-      newTransaction
-    );
+      const newTransactionId = await addTransactionToFirestore(
+        user.uid,
+        newTransaction
+      );
 
-    setTransactions((currentTransactions) => [
-      { ...newTransaction, id: newTransactionId },
-      ...currentTransactions,
-    ]);
+      setTransactions((currentTransactions) => [
+        { ...newTransaction, id: newTransactionId },
+        ...currentTransactions,
+      ]);
 
-    resetForm();
-    setCurrentPage(1);
-    setShowPopup(false);
+      resetForm();
+      setCurrentPage(1);
+      setShowPopup(false);
+    } finally {
+      setIsCategorising(false);
+    }
   };
 
   const handleEditClick = () => {
@@ -250,38 +238,44 @@ export default function TransactionsPage() {
       return;
     }
 
-    const selectedCategory =
-      category === ""
-        ? autoCategorizeTransaction(description, transactionType)
-        : category;
+    setIsCategorising(true);
 
-    const updatedTransaction: Transaction = {
-      id: transactionToEdit.id,
-      description,
-      amount: Number(amount),
-      category: selectedCategory,
-      date: transactionDate,
-      type: transactionType,
-      source: transactionToEdit.source,
-    };
+    try {
+      const selectedCategory =
+        category === ""
+          ? await categoriseTransaction(description, transactionType)
+          : category;
 
-    await updateTransactionInFirestore(
-      user.uid,
-      transactionToEdit.id,
-      updatedTransaction
-    );
+      const updatedTransaction: Transaction = {
+        id: transactionToEdit.id,
+        description,
+        amount: Number(amount),
+        category: selectedCategory,
+        date: transactionDate,
+        type: transactionType,
+        source: transactionToEdit.source,
+      };
 
-    setTransactions((currentTransactions) =>
-      currentTransactions.map((transaction) =>
-        transaction.id === transactionToEdit.id
-          ? updatedTransaction
-          : transaction
-      )
-    );
+      await updateTransactionInFirestore(
+        user.uid,
+        transactionToEdit.id,
+        updatedTransaction
+      );
 
-    resetForm();
-    setEditMode(false);
-    setShowPopup(false);
+      setTransactions((currentTransactions) =>
+        currentTransactions.map((transaction) =>
+          transaction.id === transactionToEdit.id
+            ? updatedTransaction
+            : transaction
+        )
+      );
+
+      resetForm();
+      setEditMode(false);
+      setShowPopup(false);
+    } finally {
+      setIsCategorising(false);
+    }
   };
 
   const cancelPopup = () => {
@@ -854,9 +848,14 @@ export default function TransactionsPage() {
                     ? addTransaction
                     : confirmEditTransaction
                 }
-                className="w-full rounded-lg bg-blue-600 py-3 font-bold text-white hover:bg-blue-700"
+                disabled={isCategorising}
+                className="w-full rounded-lg bg-blue-600 py-3 font-bold text-white hover:bg-blue-700 disabled:opacity-60"
               >
-                {editingIndex === null ? "Add Transaction" : "Confirm Edit"}
+                {isCategorising
+                  ? "Categorising..."
+                  : editingIndex === null
+                    ? "Add Transaction"
+                    : "Confirm Edit"}
               </button>
             </div>
           </div>
