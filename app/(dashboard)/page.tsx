@@ -97,6 +97,41 @@ export default function DashboardPage() {
     return totals;
   }, [filteredTransactions]);
 
+  const topSpendingCategory = useMemo(() => {
+  let topCategory = '';
+  let maxSpend = 0;
+
+  Object.entries(categorySpend).forEach(([category, amount]) => {
+    if (amount > maxSpend) {
+      maxSpend = amount;
+      topCategory = category;
+    }
+  });
+
+  return { category: topCategory, amount: maxSpend };
+}, [categorySpend]);
+
+  const savingsRate = useMemo(() => {
+    const savingRates = stats.income > 0 ? ((stats.income - stats.expenses) / stats.income) * 100 : 0;
+    return savingRates;
+  }, [stats.income, stats.expenses]);
+  
+  const savingsProjection = useMemo(() => {
+    const days = timeframeDays[timeframe];
+    const weeklySpendRate = stats.expenses / (days / 7);
+
+  if (stats.balance <= 0) {
+    return { status: 'ranOut' as const };
+  }
+
+  if (weeklySpendRate <= 0) {
+    return { status: 'noSpend' as const };
+  }
+
+  const weeksRemaining = stats.balance / weeklySpendRate;
+  return { status: 'ok' as const, weeks: weeksRemaining };
+  }, [stats.balance, stats.expenses, timeframe]);
+
   const budgetCategories = Object.keys(budgetByCategory);
 
   const budgetVsActualSeries = useMemo(() => [
@@ -264,9 +299,31 @@ export default function DashboardPage() {
         <div className='flex flex-col gap-2 w-full'>
           <div><h2 className='font-semibold text-2xl'>Financial Insights</h2></div>
           <Wrapper className='w-full'>
-            <div className='w-full text-left'><p className='text-xl'>Top spending category:</p></div>
-            <div className='w-full text-left'><p className='text-xl'>Savings rate:</p></div>
-            <div className='w-full text-left'><p className='text-xl'>Savings projection:</p></div>
+            <div className='w-full text-left'>
+              <p className='text-xl'>
+                Top spending category: {topSpendingCategory.category
+                  ? `${topSpendingCategory.category} (${formatCurrency(topSpendingCategory.amount)})`
+                  : 'No expense data available for this period'}
+              </p>
+            </div>
+            <div className='w-full text-left'>
+              <p className='text-xl'>
+                Savings rate: {stats.income > 0
+                  ? `${savingsRate.toFixed(2)}%`
+                  : 'No income data available for this period'}
+              </p>
+            </div>
+            <div className='w-full text-left'>
+              <p className='text-xl'>
+                Savings projection: {
+                  savingsProjection.status === 'ranOut'
+                    ? "You've run out of money"
+                    : savingsProjection.status === 'noSpend'
+                    ? 'No spending detected for this period'
+                    : `You may run short in ${savingsProjection.weeks.toFixed(1)} weeks assuming your current spending continues and are not earning any income`
+                }
+              </p>
+            </div>
           </Wrapper>
         </div>
 
