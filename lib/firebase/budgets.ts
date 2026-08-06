@@ -7,6 +7,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "./config";
+import { EXPENSE_CATEGORIES } from "@/lib/categories";
 
 export type BudgetPeriod = "Weekly" | "Fortnightly" | "Monthly";
 
@@ -17,19 +18,7 @@ export type Budget = {
 };
 
 // Predefined expense categories - users cannot create custom ones
-export const EXPENSE_CATEGORIES = [
-  "Accommodation",
-  "Utilities",
-  "Transport",
-  "Groceries",
-  "Entertainment",
-  "Education",
-  "Personal Care",
-  "Food & Dining",
-  "Other Expense",
-] as const;
-
-export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+export { EXPENSE_CATEGORIES, type ExpenseCategory } from "@/lib/categories";
 
 function createBudgetId(category: string): string {
   return category.trim().toLowerCase();
