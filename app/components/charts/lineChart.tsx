@@ -13,11 +13,21 @@ type LineChartProps = {
   data: LineChartPoint[];
   color?: string;
   height?: number;
+  referenceValue?: number;
+  referenceLabel?: string;
+  referenceColor?: string;
 };
 
-export default function LineChart({ data, color = '#4ade80', height = 160 }: LineChartProps) {
+export default function LineChart({
+  data,
+  color = '#4ade80',
+  height = 160,
+  referenceValue,
+  referenceLabel,
+  referenceColor = '#f87171',
+}: LineChartProps) {
   const chartContainer = useRef<HTMLDivElement>(null);
-  const hasData = data.some(d => d.value > 0);
+  const hasData = data.some(d => d.value > 0) || referenceValue !== undefined;
 
   useEffect(() => {
     if (!chartContainer.current || !hasData) return;
@@ -35,7 +45,14 @@ export default function LineChart({ data, color = '#4ade80', height = 160 }: Lin
       yAxis: {
         type: 'value',
         show: false,
-        scale: true,
+        min: 0,
+        max:
+          referenceValue !== undefined
+            ? Math.max(
+                referenceValue,
+                ...data.map((point) => point.value)
+              ) * 1.05
+            : undefined,
       },
       tooltip: {
         trigger: 'axis',
@@ -56,6 +73,25 @@ export default function LineChart({ data, color = '#4ade80', height = 160 }: Lin
             { offset: 1, color: `${color}00` },
           ]),
         },
+        ...(referenceValue !== undefined && {
+          markLine: {
+            symbol: 'none',
+            silent: true,
+            animation: false,
+            lineStyle: {
+              color: referenceColor,
+              type: 'dashed',
+              width: 1.5,
+            },
+            label: {
+              show: !!referenceLabel,
+              formatter: referenceLabel ?? '',
+              color: referenceColor,
+              position: 'insideEndBottom',
+            },
+            data: [{ yAxis: referenceValue }],
+          },
+        }),
       }],
     });
 
@@ -66,7 +102,7 @@ export default function LineChart({ data, color = '#4ade80', height = 160 }: Lin
       window.removeEventListener('resize', handleResize);
       chart.dispose();
     };
-  }, [data, color, hasData]);
+  }, [data, color, hasData, referenceValue, referenceLabel, referenceColor]);
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>

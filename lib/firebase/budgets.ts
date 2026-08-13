@@ -29,7 +29,7 @@ export const EXPENSE_CATEGORIES = [
   "Other Expense",
 ] as const;
 
-export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+
 
 function createBudgetId(category: string): string {
   return category.trim().toLowerCase();
@@ -51,15 +51,11 @@ export async function initializeDefaultBudgets(
     const budgetId = createBudgetId(category);
     const budgetRef = doc(db, "users", uid, "budgets", budgetId);
 
-    await setDoc(
-      budgetRef,
-      {
-        category,
-        limit: 0,
-        createdAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+    await setDoc(budgetRef, {
+      category,
+      limit: 0,
+      createdAt: serverTimestamp(),
+    });
   }
 }
 

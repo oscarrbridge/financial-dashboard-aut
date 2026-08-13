@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { requireAuth } from "@/lib/firebase/requireAuth";
 import {
   getUserBudgets,
@@ -10,89 +10,61 @@ import {
   type BudgetPeriod,
 } from "@/lib/firebase/budgets";
 import { getUserTransactions, type Transaction } from "@/lib/firebase/transactions";
+import LineChart from "@/app/components/charts/lineChart";
 
 interface BudgetDisplay {
   name: string;
   spent: number;
-  limit: number;
+  limit: number; // canonical stored value, always weekly
+  periodLimit: number; // limit converted to the currently selected budgetPeriod
   period: BudgetPeriod;
 }
 
+// Convert a canonical weekly limit to the given period.
+function convertFromWeekly(weeklyLimit: number, period: BudgetPeriod): number {
+  if (period === "Weekly") return weeklyLimit;
+  if (period === "Fortnightly") return weeklyLimit * 2;
+  if (period === "Monthly") return (weeklyLimit / 7) * 30;
+  return weeklyLimit;
+}
+
 export default function BudgetPage() {
-  const [categories, setCategories] = useState<BudgetDisplay[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [savedBudgets, setSavedBudgets] = useState<
+    Awaited<ReturnType<typeof getUserBudgets>>
+  >([]);
   const [budgetPeriod, setBudgetPeriod] = useState<BudgetPeriod>("Monthly");
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [editLimits, setEditLimits] = useState<Record<string, number>>({});
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const { user } = requireAuth();
 
-  // Get transactions from last 7 days only
-  const getLastWeekTransactions = (transactions: Transaction[]): Transaction[] => {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    return transactions.filter((transaction) => {
-      const transactionDate = new Date(transaction.date);
-      return transactionDate >= sevenDaysAgo;
-    });
+  const getPeriodDays = (): number => {
+    if (budgetPeriod === "Weekly") return 7;
+    if (budgetPeriod === "Fortnightly") return 14;
+    if (budgetPeriod === "Monthly") return 30;
+    return 7;
   };
 
-  // Calculate spent amount for a category based on transactions from last 7 days
-  const calculateCategorySpent = (
-    categoryName: string,
-    transactions: Transaction[]
-  ): number => {
-    const weekTransactions = getLastWeekTransactions(transactions);
-    return weekTransactions
-      .filter(
-        (transaction) =>
-          transaction.type === "Expense" && transaction.category === categoryName
-      )
-      .reduce((total, transaction) => total + transaction.amount, 0);
-  };
-
-  // Load budgets and transactions on mount
+  // Fetch raw budgets + transactions once per user
   useEffect(() => {
     if (!user) return;
 
-    async function loadBudgetsData() {
+    async function loadData() {
       try {
         setLoading(true);
 
         // Initialize default budgets if none exist
         await initializeDefaultBudgets(user!.uid);
 
-        // Load saved budgets
-        const savedBudgets = await getUserBudgets(user!.uid);
+        const [budgets, txns] = await Promise.all([
+          getUserBudgets(user!.uid),
+          getUserTransactions(user!.uid),
+        ]);
 
-        // Load transactions to calculate spending
-        const transactions = await getUserTransactions(user!.uid);
-
-        // Create budget display with actual spending data
-        const budgetDisplays: BudgetDisplay[] = EXPENSE_CATEGORIES.map(
-          (categoryName) => {
-            const savedBudget = savedBudgets.find(
-              (b) => b.category === categoryName
-            );
-            const spent = calculateCategorySpent(categoryName, transactions);
-
-            return {
-              name: categoryName,
-              spent,
-              limit: savedBudget?.limit ?? 0,
-              period: "Weekly",
-            };
-          }
-        );
-
-        setCategories(budgetDisplays);
-        
-        // Initialize edit limits with current values
-        const initialLimits: Record<string, number> = {};
-        budgetDisplays.forEach((cat) => {
-          initialLimits[cat.name] = cat.limit;
-        });
-        setEditLimits(initialLimits);
+        setSavedBudgets(budgets);
+        setTransactions(txns);
       } catch (error) {
         console.error("Error loading budgets:", error);
       } finally {
@@ -100,26 +72,98 @@ export default function BudgetPage() {
       }
     }
 
-    loadBudgetsData();
+    loadData();
   }, [user]);
 
+  // Derive categories locally — recalculates instantly when budgetPeriod changes, no refetch
+  const categories: BudgetDisplay[] = useMemo(() => {
+    const days = getPeriodDays();
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+
+    const recentTransactions = transactions.filter(
+      (transaction) => new Date(transaction.date) >= cutoff
+    );
+
+    return EXPENSE_CATEGORIES.map((categoryName) => {
+      const savedBudget = savedBudgets.find((b) => b.category === categoryName);
+      const spent = recentTransactions
+        .filter(
+          (transaction) =>
+            transaction.type === "Expense" && transaction.category === categoryName
+        )
+        .reduce((total, transaction) => total + transaction.amount, 0);
+
+      const limit = savedBudget?.limit ?? 0;
+
+      return {
+        name: categoryName,
+        spent,
+        limit,
+        periodLimit: convertFromWeekly(limit, budgetPeriod),
+        period: "Weekly",
+      };
+    });
+  }, [transactions, savedBudgets, budgetPeriod]);
+
+  // Keep edit limits in sync with the latest category limits
+  useEffect(() => {
+    const initialLimits: Record<string, number> = {};
+    categories.forEach((cat) => {
+      initialLimits[cat.name] = cat.limit;
+    });
+    setEditLimits(initialLimits);
+  }, [categories]);
 
   const totalSpent = categories.reduce(
     (total, category) => total + category.spent,
     0
   );
 
-
   const alerts = categories
     .filter(
       (category) =>
-        category.limit > 0 &&
-        (category.spent > category.limit ||
-          category.spent > category.limit * 0.8)
+        category.periodLimit > 0 &&
+        (category.spent > category.periodLimit ||
+          category.spent > category.periodLimit * 0.8)
     )
-    .sort((a, b) => b.spent / b.limit - a.spent / a.limit);
+    .sort((a, b) => b.spent / b.periodLimit - a.spent / a.periodLimit);
 
+  // Day-by-day cumulative spend for the expanded category, scoped to the
+  // selected period's window. Only computed when a category is open.
+  const expandedCategoryPaceData = useMemo(() => {
+    if (!expandedCategory) return [];
 
+    const days = getPeriodDays();
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+
+    const dailyTotals: Record<string, number> = {};
+    transactions
+      .filter(
+        (t) => t.type === "Expense" && t.category === expandedCategory
+      )
+      .forEach((t) => {
+        const date = new Date(t.date);
+        if (date < cutoff) return;
+        const key = date.toISOString().split("T")[0];
+        dailyTotals[key] = (dailyTotals[key] ?? 0) + t.amount;
+      });
+
+    const points: { label: string; value: number }[] = [];
+    const cursor = new Date(cutoff);
+    const today = new Date();
+    let running = 0;
+
+    while (cursor <= today) {
+      const key = cursor.toISOString().split("T")[0];
+      running += dailyTotals[key] ?? 0;
+      points.push({ label: key, value: running });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return points;
+  }, [transactions, expandedCategory, budgetPeriod]);
 
   const handleSaveAllBudgets = async () => {
     if (!user) return;
@@ -128,8 +172,8 @@ export default function BudgetPage() {
       // Save only budgets that were actually changed
       for (const category of EXPENSE_CATEGORIES) {
         const newLimit = editLimits[category] ?? 0;
-        const originalLimit = categories.find(c => c.name === category)?.limit ?? 0;
-        
+        const originalLimit = categories.find((c) => c.name === category)?.limit ?? 0;
+
         // Only save if the limit actually changed
         if (newLimit !== originalLimit) {
           await saveBudgetToFirestore(user.uid, {
@@ -139,12 +183,14 @@ export default function BudgetPage() {
         }
       }
 
-      // Update local state
-      const updatedCategories = categories.map((cat) => ({
-        ...cat,
-        limit: editLimits[cat.name] ?? 0,
-      }));
-      setCategories(updatedCategories);
+      // Refresh saved budgets from what we just wrote, so `categories` re-derives
+      setSavedBudgets((prev) =>
+        prev.map((b) =>
+          editLimits[b.category] !== undefined
+            ? { ...b, limit: editLimits[b.category] }
+            : b
+        )
+      );
       setEditMode(false);
     } catch (error) {
       console.error("Error saving budgets:", error);
@@ -155,11 +201,12 @@ export default function BudgetPage() {
     return budgetPeriod.charAt(0).toUpperCase() + budgetPeriod.slice(1);
   };
 
-  const getPeriodDays = (): number => {
-    if (budgetPeriod === "Weekly") return 7;
-    if (budgetPeriod === "Fortnightly") return 14;
-    if (budgetPeriod === "Monthly") return 30;
-    return 7;
+  // Short lowercase form for inline copy, e.g. "week" / "fortnight" / "month"
+  const getPeriodUnitLabel = (): string => {
+    if (budgetPeriod === "Weekly") return "week";
+    if (budgetPeriod === "Fortnightly") return "fortnight";
+    if (budgetPeriod === "Monthly") return "month";
+    return "week";
   };
 
   if (loading) {
@@ -169,14 +216,6 @@ export default function BudgetPage() {
       </main>
     );
   }
-
-  // Convert weekly limit to display based on selected period
-  const convertFromWeekly = (weeklyLimit: number, period: BudgetPeriod): number => {
-    if (period === "Weekly") return weeklyLimit;
-    if (period === "Fortnightly") return weeklyLimit * 2;
-    if (period === "Monthly") return (weeklyLimit / 7) * 30;
-    return weeklyLimit;
-  };
 
   return (
     <main className="min-h-screen bg-background text-text px-12 py-10 max-w-6xl mx-auto">
@@ -225,7 +264,7 @@ export default function BudgetPage() {
 
           <p className="text-3xl font-bold mt-2">
             ${categories
-              .reduce((total, category) => total + convertFromWeekly(category.limit, budgetPeriod), 0)
+              .reduce((total, category) => total + category.periodLimit, 0)
               .toFixed(2)}
           </p>
 
@@ -238,7 +277,7 @@ export default function BudgetPage() {
           <h2 className="text-inactive-text text-sm">{getPeriodLabel()} Spent</h2>
 
           <p className="text-3xl font-bold mt-2">
-            ${convertFromWeekly(totalSpent, budgetPeriod).toFixed(2)}
+            ${totalSpent.toFixed(2)}
           </p>
 
           <p className="text-sm text-inactive-text mt-2">
@@ -250,10 +289,10 @@ export default function BudgetPage() {
           <h2 className="text-inactive-text text-sm">{getPeriodLabel()} Remaining</h2>
 
           <p className="text-3xl font-bold mt-2">
-            ${(convertFromWeekly(
-              categories.reduce((total, category) => total + category.limit, 0) - totalSpent,
-              budgetPeriod
-            )).toFixed(2)}
+            ${(
+              categories.reduce((total, category) => total + category.periodLimit, 0) -
+              totalSpent
+            ).toFixed(2)}
           </p>
 
           <p className="text-sm text-inactive-text mt-2">
@@ -272,18 +311,18 @@ export default function BudgetPage() {
                 className="bg-secondary p-4 rounded-lg flex items-center justify-between border border-zinc-800"
               >
                 <p className="text-sm">
-                  {category.spent > category.limit
+                  {category.spent > category.periodLimit
                     ? `${category.name} budget has been exceeded by $${(
-                        category.spent - category.limit
+                        category.spent - category.periodLimit
                       ).toFixed(2)}.`
                     : `${category.name} has reached ${Math.round(
-                        (category.spent / category.limit) * 100
+                        (category.spent / category.periodLimit) * 100
                       )}% of its budget.`}
                 </p>
 
                 <span
                   className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                    category.spent > category.limit
+                    category.spent > category.periodLimit
                       ? "bg-red-500"
                       : "bg-orange-400"
                   }`}
@@ -298,9 +337,9 @@ export default function BudgetPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-semibold">Budget Categories</h2>
-            <p className="text-sm text-inactive-text mt-1">Weekly budgets for each category</p>
+            <p className="text-sm text-inactive-text mt-1">{getPeriodLabel()} budgets for each category</p>
           </div>
-          
+
           {!editMode && (
             <button
               onClick={() => setEditMode(true)}
@@ -343,7 +382,7 @@ export default function BudgetPage() {
                         <span className="text-sm text-inactive-text">/ week</span>
                       </div>
                       <p className="text-xs text-inactive-text mt-2">
-                        Spent this week: ${category.spent.toFixed(2)}
+                        Spent this {getPeriodUnitLabel()}: ${category.spent.toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -375,44 +414,103 @@ export default function BudgetPage() {
                   <p>No budget categories yet.</p>
                 </div>
               ) : (
-                categories.map((category) => (
-                  <div
-                    key={category.name}
-                    className="border-b border-zinc-800 pb-4 last:border-b-0"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="font-semibold">{category.name}</p>
-                      <p className="text-sm font-bold">${category.limit} / week</p>
-                    </div>
+                categories.map((category) => {
+                  const isExpanded = expandedCategory === category.name;
+                  const remaining = category.periodLimit - category.spent;
 
-                    <div className="flex justify-between text-xs text-inactive-text mb-3">
-                      <span>Spent this week: ${category.spent.toFixed(2)}</span>
-                      {category.limit > 0 && (
-                        <span>{Math.round((category.spent / category.limit) * 100)}% of budget</span>
+                  return (
+                    <div
+                      key={category.name}
+                      className="border-b border-zinc-800 pb-4 last:border-b-0"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedCategory(isExpanded ? null : category.name)
+                        }
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="font-semibold flex items-center gap-2">
+                            <span
+                              className={`inline-block transition-transform duration-200 text-inactive-text ${
+                                isExpanded ? "rotate-90" : ""
+                              }`}
+                            >
+                              ▸
+                            </span>
+                            {category.name}
+                          </p>
+                          <p className="text-sm font-bold">
+                            ${category.periodLimit.toFixed(2)} / {getPeriodUnitLabel()}
+                          </p>
+                        </div>
+
+                        <div className="flex justify-between text-xs text-inactive-text mb-3">
+                          <span>Spent this {getPeriodUnitLabel()}: ${category.spent.toFixed(2)}</span>
+                          {category.periodLimit > 0 && (
+                            <span>{Math.round((category.spent / category.periodLimit) * 100)}% of budget</span>
+                          )}
+                        </div>
+
+                        {category.periodLimit > 0 && (
+                          <div className="w-full bg-zinc-800 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full transition-all duration-500 ${
+                                category.spent > category.periodLimit
+                                  ? "bg-red-500"
+                                  : category.spent > category.periodLimit * 0.8
+                                  ? "bg-orange-400"
+                                  : "bg-green-500"
+                              }`}
+                              style={{
+                                width: `${Math.min(
+                                  (category.spent / category.periodLimit) * 100,
+                                  100
+                                )}%`,
+                              }}
+                            ></div>
+                          </div>
+                        )}
+                      </button>
+
+                      {isExpanded && (
+                        <div className="mt-4 pt-4 border-t border-zinc-800 space-y-4">
+                          <div className="flex gap-6">
+                            <div>
+                              <p className="text-xs text-inactive-text">Spent</p>
+                              <p className="text-lg font-bold">
+                                ${category.spent.toFixed(2)}{" "}
+                                <span className="text-sm font-normal text-inactive-text">
+                                  of ${category.periodLimit.toFixed(2)}
+                                </span>
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-inactive-text">Remaining</p>
+                              <p
+                                className={`text-lg font-bold ${
+                                  remaining < 0 ? "text-red-400" : ""
+                                }`}
+                              >
+                                ${remaining.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+
+                          <LineChart
+                            data={expandedCategoryPaceData}
+                            referenceValue={
+                              category.periodLimit > 0 ? category.periodLimit : undefined
+                            }
+                            referenceLabel="Budget limit"
+                            height={140}
+                          />
+                        </div>
                       )}
                     </div>
-
-                    {category.limit > 0 && (
-                      <div className="w-full bg-zinc-800 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all duration-500 ${
-                            category.spent > category.limit
-                              ? "bg-red-500"
-                              : category.spent > category.limit * 0.8
-                              ? "bg-orange-400"
-                              : "bg-green-500"
-                          }`}
-                          style={{
-                            width: `${Math.min(
-                              (category.spent / category.limit) * 100,
-                              100
-                            )}%`,
-                          }}
-                        ></div>
-                      </div>
-                    )}
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </section>
