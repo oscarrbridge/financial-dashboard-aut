@@ -102,20 +102,19 @@ export default function DashboardPage() {
 
   
   const savingsProjection = useMemo(() => {
-    const days = timeframeDays[timeframe];
-    const weeklySpendRate = stats.expenses / (days / 7);
+  const days = timeframeDays[timeframe];
+
+  if (filteredTransactions.length === 0) {
+    return { status: 'noData' as const };
+  }
 
   if (stats.balance <= 0) {
     return { status: 'ranOut' as const };
   }
 
-  if (weeklySpendRate <= 0) {
-    return { status: 'noSpend' as const };
-  }
-
-  const weeksRemaining = stats.balance / weeklySpendRate;
-  return { status: 'ok' as const, weeks: weeksRemaining };
-  }, [stats.balance, stats.expenses, timeframe]);
+  const netWeeklyFlow = (stats.income - stats.expenses - stats.debt) / (days / 7);
+  return { status: 'growing' as const, weeklyRate: netWeeklyFlow };
+}, [filteredTransactions, stats.balance, stats.income, stats.expenses, stats.debt, timeframe]);
 
   const budgetCategories = Object.keys(budgetByCategory);
 
@@ -301,11 +300,11 @@ export default function DashboardPage() {
             <div className='w-full text-left'>
               <p className='text-xl'>
                 Savings projection: {
-                  savingsProjection.status === 'ranOut'
+                  savingsProjection.status === 'noData'
+                    ? 'No transactions in this period to base a projection on'
+                    : savingsProjection.status === 'ranOut'
                     ? "You've run out of money"
-                    : savingsProjection.status === 'noSpend'
-                    ? 'No spending detected for this period'
-                    : `You may run short in ${savingsProjection.weeks.toFixed(1)} weeks assuming your current spending continues and are not earning any income`
+                    : `Your balance is growing by ${formatCurrency(savingsProjection.weeklyRate)}/week at current income, spending, and debt`
                 }
               </p>
             </div>
