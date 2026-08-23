@@ -120,14 +120,66 @@ export default function BudgetPage() {
     0
   );
 
-  const alerts = categories
+  const alerts = useMemo(() => {
+  const periods: BudgetPeriod[] = ["Weekly", "Fortnightly", "Monthly"];
+
+  return periods
+    .flatMap((period) => {
+      const days =
+        period === "Weekly" ? 7 :
+        period === "Fortnightly" ? 14 :
+        30;
+
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - days);
+
+      const periodStart = new Date(cutoff);
+      const periodEnd = new Date();
+
+      const formatDate = (date: Date) =>
+        date.toLocaleDateString("en-NZ", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+
+      return EXPENSE_CATEGORIES.map((categoryName) => {
+        const savedBudget = savedBudgets.find(
+          (budget) => budget.category === categoryName
+        );
+
+        const weeklyLimit = savedBudget?.limit ?? 0;
+        const periodLimit = convertFromWeekly(weeklyLimit, period);
+
+        const spent = transactions
+          .filter(
+            (transaction) =>
+              transaction.type === "Expense" &&
+              transaction.category === categoryName &&
+              new Date(transaction.date) >= cutoff
+          )
+          .reduce((total, transaction) => total + transaction.amount, 0);
+
+        return {
+        name: categoryName,
+        spent,
+        periodLimit,
+        period,
+        startDate: formatDate(periodStart),
+        endDate: formatDate(periodEnd),
+      };
+      });
+    })
     .filter(
-      (category) =>
-        category.periodLimit > 0 &&
-        (category.spent > category.periodLimit ||
-          category.spent > category.periodLimit * 0.8)
+      (alert) =>
+        alert.periodLimit > 0 &&
+        alert.spent > alert.periodLimit * 0.8
     )
-    .sort((a, b) => b.spent / b.periodLimit - a.spent / a.periodLimit);
+    .sort(
+      (a, b) =>
+        b.spent / b.periodLimit - a.spent / a.periodLimit
+    );
+}, [transactions, savedBudgets]);
 
   // Day-by-day cumulative spend for the expanded category, scoped to the
   // selected period's window. Only computed when a category is open.
@@ -307,17 +359,17 @@ export default function BudgetPage() {
           <div className="bg-widget p-6 rounded-lg border border-zinc-800 space-y-3">
             {alerts.map((category) => (
               <div
-                key={category.name}
+                key={`${category.name}-${category.period}`}
                 className="bg-secondary p-4 rounded-lg flex items-center justify-between border border-zinc-800"
               >
                 <p className="text-sm">
                   {category.spent > category.periodLimit
-                    ? `${category.name} budget has been exceeded by $${(
+                    ? `${category.name} ${category.period} budget has been exceeded by $${(
                         category.spent - category.periodLimit
-                      ).toFixed(2)}.`
-                    : `${category.name} has reached ${Math.round(
+                      ).toFixed(2)} — ${category.startDate} to ${category.endDate}`
+                    : `${category.name} ${category.period} budget has reached ${Math.round(
                         (category.spent / category.periodLimit) * 100
-                      )}% of its budget.`}
+                      )}% — ${category.startDate} to ${category.endDate}`}
                 </p>
 
                 <span
