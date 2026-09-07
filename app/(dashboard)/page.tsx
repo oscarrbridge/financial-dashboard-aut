@@ -97,6 +97,25 @@ export default function DashboardPage() {
     return totals;
   }, [filteredTransactions]);
 
+
+
+
+  
+  const savingsProjection = useMemo(() => {
+  const days = timeframeDays[timeframe];
+
+  if (filteredTransactions.length === 0) {
+    return { status: 'noData' as const };
+  }
+
+  if (stats.balance <= 0) {
+    return { status: 'ranOut' as const };
+  }
+
+  const netWeeklyFlow = (stats.income - stats.expenses - stats.debt) / (days / 7);
+  return { status: 'growing' as const, weeklyRate: netWeeklyFlow };
+}, [filteredTransactions, stats.balance, stats.income, stats.expenses, stats.debt, timeframe]);
+
   const budgetCategories = Object.keys(budgetByCategory);
 
   const budgetVsActualSeries = useMemo(() => [
@@ -241,6 +260,7 @@ export default function DashboardPage() {
     { name: 'Expenses', data: weeklyIncomeExpense.map(w => w.expenses), color: '#f87171' },
   ], [weeklyIncomeExpense]);
 
+
   return (
     <div className='flex flex-col w-full h-full p-6 gap-5'>
       <div className='w-full flex justify-end'>
@@ -253,20 +273,41 @@ export default function DashboardPage() {
       </div>
 
       <div className='flex flex-row w-full justify-between gap-5'>
-        
         <StatCard title="Balance" value={formatCurrency(stats.balance)}/>
         <StatCard title="Income" value={formatCurrency(stats.income)}/>
         <StatCard title="Expenses" value={formatCurrency(stats.expenses)}/>
         <StatCard title="Surplus" value={formatCurrency(stats.surplus)}/>
-      
+        <StatCard title="Debt" value={formatCurrency(stats.debt)}/>
       </div>
 
         <div className='flex flex-col gap-2 w-full'>
           <div><h2 className='font-semibold text-2xl'>Financial Insights</h2></div>
           <Wrapper className='w-full'>
-            <div className='w-full text-left'><p className='text-xl'>Top spending category:</p></div>
-            <div className='w-full text-left'><p className='text-xl'>Savings rate:</p></div>
-            <div className='w-full text-left'><p className='text-xl'>Savings projection:</p></div>
+            <div className='w-full text-left'>
+              <p className='text-xl'>
+                Top spending category: {stats.topCategory
+                  ? `${stats.topCategory} (${formatCurrency(stats.topCategoryAmount)})`
+                  : 'No expense data available for this period'}
+              </p>
+            </div>
+            <div className='w-full text-left'>
+              <p className='text-xl'>
+                Savings rate: {stats.income > 0
+                  ? `${stats.savingsRate.toFixed(2)}%`
+                  : 'No income data available for this period'}
+              </p>
+            </div>
+            <div className='w-full text-left'>
+              <p className='text-xl'>
+                Savings projection: {
+                  savingsProjection.status === 'noData'
+                    ? 'No transactions in this period to base a projection on'
+                    : savingsProjection.status === 'ranOut'
+                    ? "You've run out of money"
+                    : `Your balance is growing by ${formatCurrency(savingsProjection.weeklyRate)}/week at current income, spending, and debt`
+                }
+              </p>
+            </div>
           </Wrapper>
         </div>
 
