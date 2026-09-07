@@ -42,6 +42,7 @@ export default function TransactionsPage() {
   const [showFilterPopup, setShowFilterPopup] = useState(false);
 
   const [deleteMode, setDeleteMode] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -339,12 +340,16 @@ export default function TransactionsPage() {
       return;
     }
 
-    // Deletion confirmation warning
-    const confirmed = window.confirm(
-      `Delete ${selectedTransactions.length} transaction(s)?`
-    );
+    // Nothing is removed until the user confirms in the prompt below.
+    setShowDeleteConfirm(true);
+  };
 
-    if (!confirmed) {
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  const confirmDelete = async () => {
+    if (!user) {
       return;
     }
 
@@ -369,6 +374,7 @@ export default function TransactionsPage() {
     setSelectedTransactions([]);
     setDeleteMode(false);
     setCurrentPage(1);
+    setShowDeleteConfirm(false);
   };
 
   const totalIncome = transactions
@@ -885,6 +891,19 @@ export default function TransactionsPage() {
       )}
 
       {/* Add/Edit popup */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="relative w-[430px] rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
+            <h2 className="mb-4 text-3xl font-bold">Delete transactions?</h2>
+
+            <div className="flex gap-3">
+              <button onClick={cancelDelete}>Cancel</button>
+              <button onClick={confirmDelete}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
           <div className="relative w-[430px] rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
