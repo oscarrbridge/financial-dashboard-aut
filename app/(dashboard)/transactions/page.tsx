@@ -43,6 +43,7 @@ export default function TransactionsPage() {
 
   const [deleteMode, setDeleteMode] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -353,28 +354,34 @@ export default function TransactionsPage() {
       return;
     }
 
-    const transactionsToDelete = selectedTransactions
-      .map((index) => transactions[index])
-      .filter((transaction) => transaction?.id);
+    setIsDeleting(true);
 
-    for (const transaction of transactionsToDelete) {
-      await deleteTransactionFromFirestore(user.uid, transaction.id!);
+    try {
+      const transactionsToDelete = selectedTransactions
+        .map((index) => transactions[index])
+        .filter((transaction) => transaction?.id);
+
+      for (const transaction of transactionsToDelete) {
+        await deleteTransactionFromFirestore(user.uid, transaction.id!);
+      }
+
+      const deletedIds = transactionsToDelete.map(
+        (transaction) => transaction.id
+      );
+
+      setTransactions((currentTransactions) =>
+        currentTransactions.filter(
+          (transaction) => !deletedIds.includes(transaction.id)
+        )
+      );
+
+      setSelectedTransactions([]);
+      setDeleteMode(false);
+      setCurrentPage(1);
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsDeleting(false);
     }
-
-    const deletedIds = transactionsToDelete.map(
-      (transaction) => transaction.id
-    );
-
-    setTransactions((currentTransactions) =>
-      currentTransactions.filter(
-        (transaction) => !deletedIds.includes(transaction.id)
-      )
-    );
-
-    setSelectedTransactions([]);
-    setDeleteMode(false);
-    setCurrentPage(1);
-    setShowDeleteConfirm(false);
   };
 
   const totalIncome = transactions
@@ -908,16 +915,18 @@ export default function TransactionsPage() {
             <div className="flex gap-3">
               <button
                 onClick={cancelDelete}
-                className="w-full rounded-lg bg-zinc-200 py-3 font-bold text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+                disabled={isDeleting}
+                className="w-full rounded-lg bg-zinc-200 py-3 font-bold text-black hover:bg-zinc-300 disabled:opacity-60 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
               >
                 Cancel
               </button>
 
               <button
                 onClick={confirmDelete}
-                className="w-full rounded-lg bg-red-600 py-3 font-bold text-white hover:bg-red-700"
+                disabled={isDeleting}
+                className="w-full rounded-lg bg-red-600 py-3 font-bold text-white hover:bg-red-700 disabled:opacity-60"
               >
-                Delete
+                {isDeleting ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>
