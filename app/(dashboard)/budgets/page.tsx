@@ -249,16 +249,15 @@ export default function BudgetPage() {
     }
   };
 
-  const getPeriodLabel = (): string => {
-    return budgetPeriod.charAt(0).toUpperCase() + budgetPeriod.slice(1);
+  const getPeriodLabel = (period: BudgetPeriod = budgetPeriod): string => {
+    if (period === "Weekly") return "Last 7 days";
+    if (period === "Fortnightly") return "Last 14 days";
+    if (period === "Monthly") return "Last 30 days";
+    return "Last 7 days";
   };
 
-  // Short lowercase form for inline copy, e.g. "week" / "fortnight" / "month"
   const getPeriodUnitLabel = (): string => {
-    if (budgetPeriod === "Weekly") return "week";
-    if (budgetPeriod === "Fortnightly") return "fortnight";
-    if (budgetPeriod === "Monthly") return "month";
-    return "week";
+    return getPeriodLabel().toLowerCase();
   };
 
   if (loading) {
@@ -280,7 +279,7 @@ export default function BudgetPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <p className="text-sm text-inactive-text">View as:</p>
+          <p className="text-sm text-inactive-text">Time window:</p>
           <select
             value={budgetPeriod}
             onChange={(event) =>
@@ -288,12 +287,13 @@ export default function BudgetPage() {
             }
             className="bg-widget border border-zinc-700 px-4 py-2 rounded-lg outline-none font-semibold"
           >
-            <option>Weekly</option>
-            <option>Fortnightly</option>
-            <option>Monthly</option>
+            <option value="Weekly">Last 7 days</option>
+            <option value="Fortnightly">Last 14 days</option>
+            <option value="Monthly">Last 30 days</option>
           </select>
         </div>
       </div>
+
 
       {alerts.length > 0 && (
         <div className="mt-6 bg-red-950 border border-red-800 text-red-300 px-4 py-3 rounded-xl flex items-center justify-between">
@@ -364,12 +364,12 @@ export default function BudgetPage() {
               >
                 <p className="text-sm">
                   {category.spent > category.periodLimit
-                    ? `${category.name} ${category.period} budget has been exceeded by $${(
+                    ? `${category.name} budget for ${getPeriodLabel(category.period).toLowerCase()} has been exceeded by $${(
                         category.spent - category.periodLimit
                       ).toFixed(2)} — ${category.startDate} to ${category.endDate}`
-                    : `${category.name} ${category.period} budget has reached ${Math.round(
-                        (category.spent / category.periodLimit) * 100
-                      )}% — ${category.startDate} to ${category.endDate}`}
+                    : `${category.name} spending for ${getPeriodLabel(category.period).toLowerCase()} has reached ${Math.round(
+                        (category.spent / category.periodLimit) * 100 
+                      )}% of the limit — ${category.startDate} to ${category.endDate}`}
                 </p>
 
                 <span
@@ -405,6 +405,9 @@ export default function BudgetPage() {
         {editMode ? (
           // Edit Mode
           <div className="bg-widget p-6 rounded-lg border border-zinc-800">
+            <p className="text-sm text-inactive-text mb-4">
+              Enter each limit as a weekly amount. It is converted to the selected rolling window above.
+            </p>
             <div className="space-y-4">
               {categories.map((category) => (
                 <div
