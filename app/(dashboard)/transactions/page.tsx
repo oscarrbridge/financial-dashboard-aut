@@ -42,6 +42,8 @@ export default function TransactionsPage() {
   const [showFilterPopup, setShowFilterPopup] = useState(false);
 
   const [deleteMode, setDeleteMode] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -339,36 +341,47 @@ export default function TransactionsPage() {
       return;
     }
 
-    // Deletion confirmation warning
-    const confirmed = window.confirm(
-      `Delete ${selectedTransactions.length} transaction(s)?`
-    );
+    // Nothing is removed until the user confirms in the prompt below.
+    setShowDeleteConfirm(true);
+  };
 
-    if (!confirmed) {
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  const confirmDelete = async () => {
+    if (!user) {
       return;
     }
 
-    const transactionsToDelete = selectedTransactions
-      .map((index) => transactions[index])
-      .filter((transaction) => transaction?.id);
+    setIsDeleting(true);
 
-    for (const transaction of transactionsToDelete) {
-      await deleteTransactionFromFirestore(user.uid, transaction.id!);
+    try {
+      const transactionsToDelete = selectedTransactions
+        .map((index) => transactions[index])
+        .filter((transaction) => transaction?.id);
+
+      for (const transaction of transactionsToDelete) {
+        await deleteTransactionFromFirestore(user.uid, transaction.id!);
+      }
+
+      const deletedIds = transactionsToDelete.map(
+        (transaction) => transaction.id
+      );
+
+      setTransactions((currentTransactions) =>
+        currentTransactions.filter(
+          (transaction) => !deletedIds.includes(transaction.id)
+        )
+      );
+
+      setSelectedTransactions([]);
+      setDeleteMode(false);
+      setCurrentPage(1);
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsDeleting(false);
     }
-
-    const deletedIds = transactionsToDelete.map(
-      (transaction) => transaction.id
-    );
-
-    setTransactions((currentTransactions) =>
-      currentTransactions.filter(
-        (transaction) => !deletedIds.includes(transaction.id)
-      )
-    );
-
-    setSelectedTransactions([]);
-    setDeleteMode(false);
-    setCurrentPage(1);
   };
 
   const totalIncome = transactions
@@ -885,6 +898,41 @@ export default function TransactionsPage() {
       )}
 
       {/* Add/Edit popup */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="relative w-[430px] rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
+            <h2 className="mb-4 text-3xl font-bold">
+              Delete transaction{selectedTransactions.length === 1 ? "" : "s"}?
+            </h2>
+
+            <p className="mb-6">
+              {selectedTransactions.length === 1
+                ? "This transaction will be permanently removed."
+                : `These ${selectedTransactions.length} transactions will be permanently removed.`}{" "}
+              This can&apos;t be undone.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={cancelDelete}
+                disabled={isDeleting}
+                className="w-full rounded-lg bg-zinc-200 py-3 font-bold text-black hover:bg-zinc-300 disabled:opacity-60 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="w-full rounded-lg bg-red-600 py-3 font-bold text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
           <div className="relative w-[430px] rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
