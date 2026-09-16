@@ -40,15 +40,11 @@ export async function initializeDefaultBudgets(
     const budgetId = createBudgetId(category);
     const budgetRef = doc(db, "users", uid, "budgets", budgetId);
 
-    await setDoc(
-      budgetRef,
-      {
-        category,
-        limit: 0,
-        createdAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+    await setDoc(budgetRef, {
+      category,
+      limit: 0,
+      createdAt: serverTimestamp(),
+    });
   }
 }
 

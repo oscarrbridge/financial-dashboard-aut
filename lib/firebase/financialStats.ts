@@ -27,8 +27,16 @@ export default function useFinancialStats(transactions: Transaction[]) {
         categoryTotals[t.category] = (categoryTotals[t.category] ?? 0) + t.amount;
       });
 
-    const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'None';
+    let topCategory = '';
+    let topCategoryAmount = 0;
 
-    return { income, expenses, debt, balance, surplus, savingsRate, topCategory };
+    Object.entries(categoryTotals).forEach(([category, amount]) => {
+      if (amount > topCategoryAmount) {
+        topCategoryAmount = amount;
+        topCategory = category;
+      }
+    });
+
+    return { income, expenses, debt, balance, surplus, savingsRate, topCategory, topCategoryAmount};
   }, [transactions]);
 }
