@@ -4,6 +4,7 @@ import {
   getDocs,
   serverTimestamp,
   setDoc,
+  onSnapshot,
 } from "firebase/firestore";
 
 import { db } from "./config";
@@ -76,4 +77,22 @@ export async function getUserBudgets(
     id: budgetDocument.id,
     ...(budgetDocument.data() as Omit<Budget, "id">),
   }));
+}
+
+// Live version of getUserBudgets - fires the callback again whenever a budget
+// limit is changed. Returns an unsubscribe function.
+export function subscribeToUserBudgets(
+  uid: string,
+  onChange: (budgets: Budget[]) => void
+): () => void {
+  const budgetsRef = collection(db, "users", uid, "budgets");
+
+  return onSnapshot(budgetsRef, (snapshot) => {
+    onChange(
+      snapshot.docs.map((budgetDocument) => ({
+        id: budgetDocument.id,
+        ...(budgetDocument.data() as Omit<Budget, "id">),
+      }))
+    );
+  });
 }

@@ -6,8 +6,10 @@ import StatCard from '../components/ui/statCard';
 import { useAuth } from '@/context/authContext'
 import { CreditCard } from 'lucide-react'
 import useFinancialStats from '@/lib/firebase/financialStats'
-import { getUserTransactions } from "@/lib/firebase/transactions";
+import { subscribeToUserTransactions } from "@/lib/firebase/transactions";
 import { Transaction } from '@/lib/firebase/transactions'
+import { subscribeToUserBudgets, Budget } from '@/lib/firebase/budgets'
+import { EXPENSE_CATEGORIES } from '@/lib/categories'
 import { formatCurrency } from '@/lib/transactions/formatCurrency';
 import { matchesTransactionFilter, normalizeCsvDate } from '@/lib/transactions/filterTransactions';
 import GroupedBar from '../components/charts/groupedBar';
@@ -25,17 +27,6 @@ const TIMEFRAME_STORAGE_KEY = 'dashboard.timeframe';
 
 const flowCategoryColors = ['#a3b833', '#dc2626', '#a21caf', '#0ea5e9', '#f59e0b', '#14b8a6', '#e11d48', '#8b5cf6'];
 
-const budgetByCategory: Record<string, number> = {
-  Accommodation: 400,
-  Groceries: 300,
-  'Food & Dining': 200,
-  Transport: 150,
-  Education: 120,
-  Entertainment: 100,
-  Utilities: 120,
-  'Personal Care': 90,
-};
-
 function formatDate(date: Date) {
   return date.toISOString().split('T')[0];
 }
@@ -44,6 +35,7 @@ export default function DashboardPage() {
   const user = useAuth();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [timeframe, setTimeframe] = useState('7D');
   const isFirstTimeframeWrite = useRef(true);
 
@@ -63,12 +55,17 @@ export default function DashboardPage() {
   }, [timeframe]);
 
   useEffect(() => {
-    async function loadTransactions() {
-      if (!user) return;
-      const savedTransactions = await getUserTransactions(user.uid);
-      setTransactions(savedTransactions);
-    }
-    loadTransactions();
+    if (!user) return;
+
+    // Live listeners so the charts follow transaction and budget edits without
+    // needing a page refresh.
+    const unsubscribeTransactions = subscribeToUserTransactions(user.uid, setTransactions);
+    const unsubscribeBudgets = subscribeToUserBudgets(user.uid, setBudgets);
+
+    return () => {
+      unsubscribeTransactions();
+      unsubscribeBudgets();
+    };
   }, [user]);
 
   const filteredTransactions = useMemo(() => {
@@ -116,12 +113,30 @@ export default function DashboardPage() {
   return { status: 'growing' as const, weeklyRate: netWeeklyFlow };
 }, [filteredTransactions, stats.balance, stats.income, stats.expenses, stats.debt, timeframe]);
 
-  const budgetCategories = Object.keys(budgetByCategory);
+  // Budget limits are stored weekly, so scale them to the selected timeframe
+  // to compare like for like against what was actually spent in that window.
+  const plannedByCategory = useMemo(() => {
+    const weeksInTimeframe = timeframeDays[timeframe] / 7;
+
+    const planned: Record<string, number> = {};
+    budgets.forEach(budget => {
+      planned[budget.category] = budget.limit * weeksInTimeframe;
+    });
+    return planned;
+  }, [budgets, timeframe]);
+
+  // Show every category the user has either budgeted for or spent in.
+  const budgetCategories = useMemo(
+    () => EXPENSE_CATEGORIES.filter(
+      category => (plannedByCategory[category] ?? 0) > 0 || (categorySpend[category] ?? 0) > 0
+    ),
+    [plannedByCategory, categorySpend]
+  );
 
   const budgetVsActualSeries = useMemo(() => [
-    { name: 'Budget', data: budgetCategories.map(c => budgetByCategory[c]), color: '#6366f1' },
+    { name: 'Planned', data: budgetCategories.map(c => plannedByCategory[c] ?? 0), color: '#6366f1' },
     { name: 'Actual', data: budgetCategories.map(c => categorySpend[c] ?? 0), color: '#f97316' },
-  ], [categorySpend, budgetCategories]);
+  ], [categorySpend, plannedByCategory, budgetCategories]);
 
   const cumulativeExpenseData = useMemo(() => {
     const days = timeframeDays[timeframe];
@@ -313,7 +328,7 @@ export default function DashboardPage() {
 
         <div className='flex flex-row w-full gap-5'>
           <div className='flex flex-col gap-2 w-full'>
-            <div><h2 className='font-semibold text-2xl'>Budget vs Actual</h2></div>
+            <div><h2 className='font-semibold text-2xl'>Planned vs Actual Spending</h2></div>
             <GroupedBar categories={budgetCategories} series={budgetVsActualSeries} />
           </div>
 

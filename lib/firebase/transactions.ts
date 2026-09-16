@@ -8,7 +8,8 @@ import {
   serverTimestamp,
   query,
   orderBy,
-  writeBatch
+  writeBatch,
+  onSnapshot
 } from "firebase/firestore";
 
 import { db } from "./config";
@@ -52,6 +53,26 @@ export async function getUserTransactions(uid: string): Promise<Transaction[]> {
     id: docSnapshot.id,
     ...(docSnapshot.data() as Omit<Transaction, "id">),
   }));
+}
+
+// Live version of getUserTransactions - fires the callback again whenever a
+// transaction is added, edited or deleted. Returns an unsubscribe function.
+export function subscribeToUserTransactions(
+  uid: string,
+  onChange: (transactions: Transaction[]) => void
+): () => void {
+  const transactionsRef = collection(db, "users", uid, "transactions");
+
+  const q = query(transactionsRef, orderBy("createdAt", "desc"));
+
+  return onSnapshot(q, (snapshot) => {
+    onChange(
+      snapshot.docs.map((docSnapshot) => ({
+        id: docSnapshot.id,
+        ...(docSnapshot.data() as Omit<Transaction, "id">),
+      }))
+    );
+  });
 }
 
 export async function updateTransactionInFirestore(
