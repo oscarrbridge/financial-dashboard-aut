@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pencil, Trash2, Filter } from "lucide-react";
 import CsvUpload from "../../components/csvUpload";
 import { requireAuth } from "@/lib/firebase/requireAuth";
@@ -13,6 +13,7 @@ import {
 import {
   addTransactionToFirestore,
   addTransactionsBatchToFirestore,
+  deleteTransactionsBatchFromFirestore,
   getUserTransactions,
   updateTransactionInFirestore,
   deleteTransactionFromFirestore,
@@ -33,6 +34,22 @@ type Transaction = {
   source?: "manual" | "csv";
 };
 
+type DuplicateGroup = {
+  transaction: Transaction;
+  duplicateIds: string[];
+  count: number;
+};
+
+function getDuplicateKey(transaction: Transaction) {
+  return [
+    transaction.date.trim(),
+    transaction.description.trim().toLowerCase(),
+    transaction.type,
+    transaction.category.trim().toLowerCase(),
+    transaction.amount,
+  ].join("\u001f");
+}
+
 const categoryOptions = CATEGORIES_BY_TYPE;
 
 export default function TransactionsPage() {
@@ -44,6 +61,9 @@ export default function TransactionsPage() {
   const [deleteMode, setDeleteMode] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false);
+  const [isRemovingDuplicates, setIsRemovingDuplicates] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -68,6 +88,34 @@ export default function TransactionsPage() {
   const [isCategorising, setIsCategorising] = useState(false);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  const duplicateGroups = useMemo<DuplicateGroup[]>(() => {
+    const grouped = new Map<string, Transaction[]>();
+
+    transactions.forEach((transaction) => {
+      const group = grouped.get(getDuplicateKey(transaction)) ?? [];
+      group.push(transaction);
+      grouped.set(getDuplicateKey(transaction), group);
+    });
+
+    return Array.from(grouped.values())
+      .filter((group) => group.length > 1)
+      .map((group) => ({
+        transaction: group[group.length - 1],
+        duplicateIds: group
+          .slice(0, -1)
+          .map((transaction) => transaction.id)
+          .filter((id): id is string => Boolean(id)),
+        count: group.length,
+      }));
+  }, [transactions]);
+
+  const duplicateCount = duplicateGroups.reduce(
+    (count, group) => count + group.duplicateIds.length,
+    0
+  );
+
+  const duplicateIds = duplicateGroups.flatMap((group) => group.duplicateIds);
 
   const isFilterActive = startDate !== "" || endDate !== "";
 
@@ -349,6 +397,35 @@ export default function TransactionsPage() {
     setShowDeleteConfirm(false);
   };
 
+  const openDuplicateReview = () => {
+    setShowDuplicateModal(true);
+  };
+
+  const cancelDuplicateCleanup = () => {
+    setShowDuplicateConfirm(false);
+  };
+
+  const confirmDuplicateCleanup = async () => {
+    if (!user || duplicateIds.length === 0) {
+      return;
+    }
+
+    setIsRemovingDuplicates(true);
+
+    try {
+      await deleteTransactionsBatchFromFirestore(user.uid, duplicateIds);
+      setTransactions((currentTransactions) =>
+        currentTransactions.filter(
+          (transaction) => !duplicateIds.includes(transaction.id ?? "")
+        )
+      );
+      setShowDuplicateConfirm(false);
+      setShowDuplicateModal(false);
+    } finally {
+      setIsRemovingDuplicates(false);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!user) {
       return;
@@ -472,6 +549,23 @@ export default function TransactionsPage() {
         <h1 className="mb-10 text-2xl">
           Welcome back &lt;user&gt;
         </h1>
+
+        {duplicateGroups.length > 0 && (
+          <div className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
+            <div>
+              <p className="font-bold">Duplicate transactions found</p>
+              <p className="text-sm">
+                {duplicateCount} extra transaction{duplicateCount === 1 ? "" : "s"} in {duplicateGroups.length} group{duplicateGroups.length === 1 ? "" : "s"} can be removed.
+              </p>
+            </div>
+            <button
+              onClick={openDuplicateReview}
+              className="shrink-0 rounded-lg bg-amber-600 px-4 py-2 font-bold text-white hover:bg-amber-700"
+            >
+              Review duplicates
+            </button>
+          </div>
+        )}
 
         {/* Summary */}
         <div className="mb-6 grid grid-cols-3 rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900">
@@ -803,6 +897,85 @@ export default function TransactionsPage() {
       </div>
 
       {/* Filter popup */}
+      {showDuplicateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="relative max-h-[85vh] w-[min(620px,100%)] overflow-y-auto rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
+            <button
+              onClick={() => setShowDuplicateModal(false)}
+              className="absolute right-4 top-4 rounded-lg bg-zinc-200 px-3 py-1 font-bold text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+            >
+              X
+            </button>
+
+            <h2 className="mb-2 pr-10 text-2xl font-bold">
+              Duplicate transactions
+            </h2>
+            <p className="mb-5 text-sm text-zinc-600 dark:text-zinc-400">
+              One copy from each group will be kept. The {duplicateCount} newer duplicate{duplicateCount === 1 ? "" : "s"} will be removed.
+            </p>
+
+            <div className="mb-6 space-y-3">
+              {duplicateGroups.map((group) => (
+                <div
+                  key={group.duplicateIds.join("-")}
+                  className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700"
+                >
+                  <p className="font-bold">{group.transaction.description}</p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    {group.transaction.date} · {group.transaction.type} · {group.transaction.category} · {formatCurrency(group.transaction.amount)}
+                  </p>
+                  <p className="mt-2 text-sm">
+                    {group.count} identical copies found; {group.duplicateIds.length} will be removed.
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDuplicateModal(false)}
+                className="w-full rounded-lg bg-zinc-200 py-3 font-bold text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => setShowDuplicateConfirm(true)}
+                className="w-full rounded-lg bg-red-600 py-3 font-bold text-white hover:bg-red-700"
+              >
+                Remove duplicates
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDuplicateConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-[430px] max-w-full rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
+            <h2 className="mb-4 text-2xl font-bold">Remove duplicate transactions?</h2>
+            <p className="mb-6 text-sm">
+              {duplicateCount} duplicate transaction{duplicateCount === 1 ? "" : "s"} will be permanently removed. One copy from each group will remain.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={cancelDuplicateCleanup}
+                disabled={isRemovingDuplicates}
+                className="w-full rounded-lg bg-zinc-200 py-3 font-bold text-black hover:bg-zinc-300 disabled:opacity-60 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDuplicateCleanup}
+                disabled={isRemovingDuplicates}
+                className="w-full rounded-lg bg-red-600 py-3 font-bold text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {isRemovingDuplicates ? "Removing..." : "Confirm removal"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showFilterPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
           <div className="relative w-[420px] rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
