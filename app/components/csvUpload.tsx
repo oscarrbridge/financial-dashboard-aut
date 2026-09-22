@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import Papa from "papaparse";
-import { Button } from "@/app/components/ui/ui";
 import { categoriseTransactionsBatch } from "@/lib/ai/categoriseTransaction";
 import {
   INCOME_CATEGORIES,
@@ -212,7 +211,7 @@ export default function CsvUpload({ onConfirmImport }: CsvUploadProps)  {
         type="button"
         onClick={() => fileInputRef.current?.click()}
         disabled={isCategorising}
-        className="w-full bg-white text-black py-3 rounded-lg font-bold disabled:opacity-60"
+        className="w-full rounded-lg bg-zinc-200 py-3 font-bold text-black hover:bg-zinc-300 disabled:opacity-60 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
       >
         {isCategorising ? "Categorising..." : "CSV Import"}
       </button>
@@ -514,8 +513,8 @@ const overlayStyle: React.CSSProperties = {
 };
 
 const modalStyle: React.CSSProperties = {
-  backgroundColor: "white",
-  color: "black",
+  backgroundColor: "#09090b",
+  color: "white",
   padding: "24px",
   borderRadius: "12px",
   width: "90%",
@@ -535,7 +534,7 @@ const modalHeaderStyle: React.CSSProperties = {
 const closeButtonStyle: React.CSSProperties = {
   border: "none",
   background: "none",
-  color: "black",
+  color: "white",
   fontSize: "28px",
   cursor: "pointer",
 };
@@ -543,22 +542,22 @@ const closeButtonStyle: React.CSSProperties = {
 const tableContainerStyle: React.CSSProperties = {
   overflowX: "auto",
   marginTop: "12px",
-  border: "1px solid #ddd",
+  border: "1px solid #3f3f46",
   borderRadius: "8px",
 };
 
 const tableStyle: React.CSSProperties = {
   width: "100%",
   borderCollapse: "collapse",
-  color: "black",
+  color: "white",
   fontSize: "14px",
 };
 
 const tableHeaderCellStyle: React.CSSProperties = {
-  borderBottom: "2px solid #ccc",
+  borderBottom: "2px solid #52525b",
   padding: "10px 12px",
   textAlign: "left",
-  backgroundColor: "#f5f5f5",
+  backgroundColor: "#27272a",
   fontWeight: "bold",
   position: "sticky",
   top: 0,
@@ -566,7 +565,7 @@ const tableHeaderCellStyle: React.CSSProperties = {
 };
 
 const tableCellStyle: React.CSSProperties = {
-  borderBottom: "1px solid #e5e5e5",
+  borderBottom: "1px solid #3f3f46",
   padding: "10px 12px",
   textAlign: "left",
 };
@@ -580,14 +579,14 @@ const amountCellStyle: React.CSSProperties = {
 const selectStyle: React.CSSProperties = {
   width: "100%",
   padding: "6px 8px",
-  border: "1px solid #ccc",
+  border: "1px solid #52525b",
   borderRadius: "6px",
-  backgroundColor: "white",
-  color: "black",
+  backgroundColor: "#18181b",
+  color: "white",
 };
 
 const categorisingTextStyle: React.CSSProperties = {
-  color: "#888",
+  color: "#a1a1aa",
   fontStyle: "italic",
   fontSize: "13px",
 };
@@ -601,7 +600,7 @@ const deleteButtonStyle: React.CSSProperties = {
   padding: "6px 10px",
   border: "1px solid #d9534f",
   borderRadius: "6px",
-  backgroundColor: "white",
+  backgroundColor: "#18181b",
   color: "#d9534f",
   cursor: "pointer",
 };
@@ -612,7 +611,7 @@ const confirmButtonStyle: React.CSSProperties = {
   padding: "12px",
   border: "none",
   borderRadius: "8px",
-  backgroundColor: "black",
+  backgroundColor: "#2563eb",
   color: "white",
   fontWeight: "bold",
   cursor: "pointer",
