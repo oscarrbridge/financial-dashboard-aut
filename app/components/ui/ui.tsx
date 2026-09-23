@@ -12,12 +12,23 @@ type ButtonProps = {
 	onClick?: () => void;
 	type?: "button" | "submit" | "reset";
 	children?: React.ReactNode;
-	width?: number
+	width?: number;
 };
 
-export function Button({ buttonText, onClick, type, children, width }: ButtonProps) {
+export function Button({
+	buttonText,
+	onClick,
+	type,
+	children,
+	width,
+}: ButtonProps) {
 	return (
-		<button className='custom-button' style={{minWidth: width}} onClick={onClick} type={type}>
+		<button
+			className="custom-button"
+			style={{ minWidth: width }}
+			onClick={onClick}
+			type={type}
+		>
 			{children ?? buttonText}
 		</button>
 	);
@@ -65,8 +76,19 @@ type WrapperProps = {
 	style?: React.CSSProperties;
 };
 
-export function Wrapper({ children, className = "", style }: WrapperProps) {
-	return <div className={`custom-wrapper ${className}`} style={style}>{children}</div>;
+export function Wrapper({
+	children,
+	className = "",
+	style,
+}: WrapperProps) {
+	return (
+		<div
+			className={`custom-wrapper ${className}`}
+			style={style}
+		>
+			{children}
+		</div>
+	);
 }
 
 type MultiSelectProps = {
@@ -74,7 +96,10 @@ type MultiSelectProps = {
 	onChange?: (selected: string) => void;
 };
 
-export function MultiSelect({ options, onChange }: MultiSelectProps) {
+export function MultiSelect({
+	options,
+	onChange,
+}: MultiSelectProps) {
 	const [selected, setSelected] = useState<string>(options[0]);
 
 	const select = (option: string) => {
@@ -86,7 +111,9 @@ export function MultiSelect({ options, onChange }: MultiSelectProps) {
 		<div className="custom-multi-select">
 			{options.map((option, index) => (
 				<span
-					className={`multi-select-option ${selected === option ? "active" : ""}`}
+					className={`multi-select-option ${
+						selected === option ? "active" : ""
+					}`}
 					key={index}
 					onClick={() => select(option)}
 				>
@@ -112,31 +139,55 @@ export function NavIcon({
 	active,
 	onClick,
 }: NavIconProps) {
+	const isTransactions = text === "Transactions";
+
 	return (
 		<Link
 			href={link}
-			className={`custom-nav-icon relative flex flex-col items-center ${active}`}
+			className={`custom-nav-icon relative flex flex-col items-center justify-center text-center ${active}`}
 			onClick={onClick}
 		>
-			<Icon />
-			{text}
-			{active && <Dot className="active-dot absolute bottom-0" />}
+			<Icon className="shrink-0" />
+
+			<span
+				className="w-full text-center leading-tight"
+				style={{
+					transform: isTransactions
+						? "translateX(-5px)"
+						: undefined,
+				}}
+			>
+				{text}
+			</span>
+
+			{active && (
+				<Dot className="active-dot absolute bottom-0" />
+			)}
 		</Link>
 	);
 }
 
 type dropDownProps = {
-	options : string[];
+	options: string[];
 	onChange?: (selected: string) => void;
 	value?: string;
-}
+};
 
-export function DropDown({ options, onChange, value } : dropDownProps){
+export function DropDown({
+	options,
+	onChange,
+	value,
+}: dropDownProps) {
 	return (
-		<select value={value} onChange={(e) => onChange?.(e.target.value)}>
+		<select
+			value={value}
+			onChange={(e) => onChange?.(e.target.value)}
+		>
 			{options.map((option, index) => (
-				<option key={index} value={option}>{option}</option>
-			)) }
+				<option key={index} value={option}>
+					{option}
+				</option>
+			))}
 		</select>
 	);
 }
@@ -145,11 +196,15 @@ type InfoTooltipProps = {
 	text: string;
 };
 
-export function InfoTooltip({ text }: InfoTooltipProps) {
+export function InfoTooltip({
+	text,
+}: InfoTooltipProps) {
 	return (
 		<div className="info-tooltip">
 			<span className="info-tooltip-icon">?</span>
-			<span className="info-tooltip-text">{text}</span>
+			<span className="info-tooltip-text">
+				{text}
+			</span>
 		</div>
 	);
 }
@@ -158,9 +213,14 @@ type NoDataProps = {
 	height?: number;
 };
 
-export function NoData({ height = 320 }: NoDataProps) {
+export function NoData({
+	height = 320,
+}: NoDataProps) {
 	return (
-		<div className="no-data" style={{ height }}>
+		<div
+			className="no-data"
+			style={{ height }}
+		>
 			No data available
 		</div>
 	);
