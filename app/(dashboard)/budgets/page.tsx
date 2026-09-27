@@ -36,7 +36,7 @@ export default function BudgetPage() {
   const [budgetPeriod, setBudgetPeriod] = useState<BudgetPeriod>("Monthly");
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
-  const [editLimits, setEditLimits] = useState<Record<string, number | string>>({});
+  const [editLimits, setEditLimits] = useState<Record<string, number>>({});
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const { user } = requireAuth();
 
@@ -223,7 +223,7 @@ export default function BudgetPage() {
     try {
       // Save only budgets that were actually changed
       for (const category of EXPENSE_CATEGORIES) {
-        const newLimit = Number(editLimits[category] ?? 0);
+        const newLimit = editLimits[category] ?? 0;
         const originalLimit = categories.find((c) => c.name === category)?.limit ?? 0;
 
         // Only save if the limit actually changed
@@ -239,7 +239,7 @@ export default function BudgetPage() {
       setSavedBudgets((prev) =>
         prev.map((b) =>
           editLimits[b.category] !== undefined
-            ? { ...b, limit: Number(editLimits[b.category] ?? 0) }
+            ? { ...b, limit: editLimits[b.category] }
             : b
         )
       );
@@ -425,12 +425,11 @@ export default function BudgetPage() {
                           type="number"
                           min="0"
                           step="10"
-                          value={editLimits[category.name] ?? ""}
+                          value={editLimits[category.name] ?? 0}
                           onChange={(e) =>
                             setEditLimits({
                               ...editLimits,
-                              [category.name]:
-                                e.target.value === "" ? "" : Number(e.target.value),
+                              [category.name]: Number(e.target.value) || 0,
                             })
                           }
                           className="bg-secondary border border-zinc-700 px-3 py-2 rounded text-white outline-none w-24"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Trash2, Filter } from "lucide-react";
+import { Pencil, Trash2, Filter, ReceiptText, Search, Plus, X } from "lucide-react";
 import CsvUpload from "../../components/csvUpload";
 import { requireAuth } from "@/lib/firebase/requireAuth";
 import { categoriseTransaction } from "@/lib/ai/categoriseTransaction";
@@ -93,9 +93,10 @@ export default function TransactionsPage() {
     const grouped = new Map<string, Transaction[]>();
 
     transactions.forEach((transaction) => {
-      const group = grouped.get(getDuplicateKey(transaction)) ?? [];
+      const key = getDuplicateKey(transaction);
+      const group = grouped.get(key) ?? [];
       group.push(transaction);
-      grouped.set(getDuplicateKey(transaction), group);
+      grouped.set(key, group);
     });
 
     return Array.from(grouped.values())
@@ -120,8 +121,12 @@ export default function TransactionsPage() {
   const isFilterActive = startDate !== "" || endDate !== "";
 
   const formatDate = (date: Date) => {
-    return date.toISOString().split("T")[0];
-  };
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
 
   const setLastWeekFilter = () => {
     const today = new Date();
@@ -397,35 +402,6 @@ export default function TransactionsPage() {
     setShowDeleteConfirm(false);
   };
 
-  const openDuplicateReview = () => {
-    setShowDuplicateModal(true);
-  };
-
-  const cancelDuplicateCleanup = () => {
-    setShowDuplicateConfirm(false);
-  };
-
-  const confirmDuplicateCleanup = async () => {
-    if (!user || duplicateIds.length === 0) {
-      return;
-    }
-
-    setIsRemovingDuplicates(true);
-
-    try {
-      await deleteTransactionsBatchFromFirestore(user.uid, duplicateIds);
-      setTransactions((currentTransactions) =>
-        currentTransactions.filter(
-          (transaction) => !duplicateIds.includes(transaction.id ?? "")
-        )
-      );
-      setShowDuplicateConfirm(false);
-      setShowDuplicateModal(false);
-    } finally {
-      setIsRemovingDuplicates(false);
-    }
-  };
-
   const confirmDelete = async () => {
     if (!user) {
       return;
@@ -458,6 +434,27 @@ export default function TransactionsPage() {
       setShowDeleteConfirm(false);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const confirmDuplicateCleanup = async () => {
+    if (!user || duplicateIds.length === 0) {
+      return;
+    }
+
+    setIsRemovingDuplicates(true);
+
+    try {
+      await deleteTransactionsBatchFromFirestore(user.uid, duplicateIds);
+      setTransactions((currentTransactions) =>
+        currentTransactions.filter(
+          (transaction) => !duplicateIds.includes(transaction.id ?? "")
+        )
+      );
+      setShowDuplicateConfirm(false);
+      setShowDuplicateModal(false);
+    } finally {
+      setIsRemovingDuplicates(false);
     }
   };
 
@@ -543,260 +540,293 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-[900px] bg-white text-black dark:bg-black dark:text-white">
-      {/* Sticky top area */}
-      <div className="sticky top-0 z-40 bg-white px-8 pb-4 pt-8 dark:bg-black">
+    <main className="min-h-screen bg-background px-8 py-10 text-text xl:px-12">
+      <div className="mx-auto max-w-7xl">
+        {/* Page heading */}
+        <div className="mb-8">
+          <div className="mb-2 flex items-center gap-3">
+            <div className="rounded-xl bg-blue-600/15 p-3 text-blue-400">
+              <ReceiptText size={26} />
+            </div>
 
-        {duplicateGroups.length > 0 && (
-          <div className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
             <div>
-              <p className="font-bold">Duplicate transactions found</p>
-              <p className="text-sm">
-                {duplicateCount} extra transaction{duplicateCount === 1 ? "" : "s"} in {duplicateGroups.length} group{duplicateGroups.length === 1 ? "" : "s"} can be removed.
+              <h1 className="text-3xl font-bold">Transactions</h1>
+              <p className="mt-1 text-inactive-text">
+                Review, search, filter, add, edit, and manage your financial transactions.
               </p>
             </div>
-            <button
-              onClick={openDuplicateReview}
-              className="shrink-0 rounded-lg bg-amber-600 px-4 py-2 font-bold text-white hover:bg-amber-700"
-            >
-              Review duplicates
-            </button>
           </div>
-        )}
+        </div>
 
         {/* Summary */}
-        <div className="mb-6 grid grid-cols-3 rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900">
-          <div className="border-r border-zinc-300 p-6 dark:border-zinc-500">
-            <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-300">
-              Total Transactions
-            </p>
-
-            <p className="text-3xl">
-              {transactions.length}
-            </p>
+        <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-zinc-800 bg-widget p-5 shadow-lg">
+            <p className="text-sm text-inactive-text">Total Transactions</p>
+            <p className="mt-2 text-3xl font-bold">{transactions.length}</p>
           </div>
 
-          <div className="border-r border-zinc-300 p-6 dark:border-zinc-500">
-            <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-300">
-              Total Income
-            </p>
-
-            <p className="text-3xl">
+          <div className="rounded-2xl border border-zinc-800 bg-widget p-5 shadow-lg">
+            <p className="text-sm text-inactive-text">Total Income</p>
+            <p className="mt-2 text-3xl font-bold text-green-400">
               {formatCurrency(totalIncome)}
             </p>
           </div>
 
-          <div className="p-6">
-            <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-300">
-              Total Expenses
-            </p>
-
-            <p className="text-3xl">
+          <div className="rounded-2xl border border-zinc-800 bg-widget p-5 shadow-lg">
+            <p className="text-sm text-inactive-text">Total Expenses</p>
+            <p className="mt-2 text-3xl font-bold text-red-400">
               {formatCurrency(totalExpenses)}
             </p>
           </div>
-        </div>
+        </section>
 
-        {/* Search / edit / delete / filter */}
-        <div className="rounded-lg border border-zinc-200 bg-zinc-100 p-3 dark:border-zinc-700 dark:bg-zinc-900">
-          <div className="flex gap-2">
-            <input
-              placeholder="Search Transactions"
-              value={searchText}
-              onChange={(event) => {
-                setSearchText(event.target.value);
-                setCurrentPage(1);
-              }}
-              className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-black outline-none focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-950 dark:text-white"
-            />
-
+        {duplicateGroups.length > 0 && (
+          <section className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-800/60 bg-amber-950/20 p-5">
+            <div>
+              <p className="font-bold text-amber-300">Duplicate transactions found</p>
+              <p className="mt-1 text-sm text-amber-200/80">
+                {duplicateCount} extra transaction{duplicateCount === 1 ? "" : "s"} in {duplicateGroups.length} group{duplicateGroups.length === 1 ? "" : "s"} can be removed.
+              </p>
+            </div>
             <button
-              onClick={handleEditClick}
-              title="Edit"
-              className={`rounded-lg px-4 py-2 ${
-                editMode
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-black hover:bg-zinc-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-              }`}
+              type="button"
+              onClick={() => setShowDuplicateModal(true)}
+              className="rounded-xl bg-amber-600 px-4 py-2.5 font-semibold text-white transition hover:bg-amber-700"
             >
-              <Pencil size={18} />
+              Review duplicates
             </button>
+          </section>
+        )}
 
-            <button
-              onClick={handleDeleteClick}
-              title="Delete"
-              className={`rounded-lg px-4 py-2 ${
-                deleteMode
-                  ? "bg-red-600 text-white"
-                  : "bg-white text-black hover:bg-zinc-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-              }`}
-            >
-              <Trash2 size={18} />
-            </button>
-
-            <button
-              onClick={() => {
-                if (isFilterActive) {
-                  setStartDate("");
-                  setEndDate("");
+        {/* Search / actions */}
+        <section className="mb-6 rounded-2xl border border-zinc-800 bg-widget p-5 shadow-lg">
+          <div className="flex flex-col gap-3 lg:flex-row">
+            <div className="relative min-w-0 flex-1">
+              <input
+                placeholder="Search Transactions"
+                value={searchText}
+                onChange={(event) => {
+                  setSearchText(event.target.value);
                   setCurrentPage(1);
-                  return;
-                }
+                }}
+                className="w-full rounded-xl border border-zinc-700 bg-secondary px-4 py-3 pr-11 text-text outline-none transition focus:border-blue-500"
+              />
 
-                setShowFilterPopup(true);
-              }}
-              title="Filter"
-              className={`rounded-lg px-4 py-2 ${
-                isFilterActive
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-black hover:bg-zinc-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-              }`}
-            >
-              <Filter size={18} />
-            </button>
+              <Search
+                size={19}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-inactive-text"
+              />
+            </div>
 
-            <button
-              onClick={() => {
-                resetForm();
-                setEditMode(false);
-                setShowPopup(true);
-              }}
-              className="rounded-lg bg-white px-4 py-2 text-black hover:bg-zinc-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-            >
-              + New Transaction
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleEditClick}
+                title="Edit"
+                className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition ${
+                  editMode
+                    ? "border-blue-500 bg-blue-600 text-white"
+                    : "border-zinc-700 bg-secondary hover:border-zinc-500"
+                }`}
+              >
+                <Pencil size={18} />
+                <span className="hidden sm:inline">Edit</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDeleteClick}
+                title="Delete"
+                className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition ${
+                  deleteMode
+                    ? "border-red-500 bg-red-600 text-white"
+                    : "border-zinc-700 bg-secondary hover:border-zinc-500"
+                }`}
+              >
+                <Trash2 size={18} />
+                <span className="hidden sm:inline">Delete</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (isFilterActive) {
+                    setStartDate("");
+                    setEndDate("");
+                    setCurrentPage(1);
+                    return;
+                  }
+
+                  setShowFilterPopup(true);
+                }}
+                title={isFilterActive ? "Clear filter" : "Filter"}
+                className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition ${
+                  isFilterActive
+                    ? "border-blue-500 bg-blue-600 text-white"
+                    : "border-zinc-700 bg-secondary hover:border-zinc-500"
+                }`}
+              >
+                <Filter size={18} />
+                <span className="hidden sm:inline">
+                  {isFilterActive ? "Clear Filter" : "Filter"}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  resetForm();
+                  setEditMode(false);
+                  setShowPopup(true);
+                }}
+                className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+              >
+                <Plus size={18} />
+                New Transaction
+              </button>
+            </div>
           </div>
 
           {isFilterActive && (
-            <p className="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400">
-              {`Showing transactions from ${
-                startDate || "the beginning"
-              } to ${endDate || "today"}`}
-            </p>
+            <div className="mt-4 rounded-xl border border-blue-900/60 bg-blue-950/20 px-4 py-3">
+              <p className="text-sm font-medium text-blue-300">
+                {`Showing transactions from ${
+                  startDate || "the beginning"
+                } to ${endDate || "today"}`}
+              </p>
+            </div>
           )}
-        </div>
-      </div>
+        </section>
 
-      {/* Transaction list */}
-      <div className="px-8 pb-8">
-        <div className="rounded-lg border border-zinc-200 bg-zinc-100 p-3 dark:border-zinc-700 dark:bg-zinc-900">
+        {/* Transaction list */}
+        <section className="rounded-2xl border border-zinc-800 bg-widget p-5 shadow-lg">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-blue-400">
+                Transaction History
+              </p>
+              <h2 className="mt-1 text-2xl font-bold">Your Transactions</h2>
+            </div>
+
+            <p className="text-sm text-inactive-text">
+              {filteredTransactionsWithIndex.length} result
+              {filteredTransactionsWithIndex.length === 1 ? "" : "s"}
+            </p>
+          </div>
+
           {editMode && (
-            <p className="mb-3 text-sm text-blue-600 dark:text-blue-400">
-              Edit mode is on. Click a transaction to edit it.
-            </p>
-          )}
-
-          {deleteMode && (
-            <div className="mb-3 flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={
-                  currentTransactions.length > 0 &&
-                  currentTransactions.every(({ originalIndex }) =>
-                    selectedTransactions.includes(originalIndex)
-                  )
-                }
-                onChange={toggleSelectAll}
-              />
-
-              <span>Select All</span>
-
-              <span className="text-zinc-600 dark:text-zinc-400">
-                {selectedTransactions.length} selected
-              </span>
+            <div className="mb-4 rounded-xl border border-blue-900/60 bg-blue-950/20 px-4 py-3">
+              <p className="text-sm text-blue-300">
+                Edit mode is on. Click a transaction to edit it.
+              </p>
             </div>
           )}
 
-          {/* Transactions */}
-          <div className="rounded-lg bg-zinc-200 p-2 dark:bg-zinc-800">
+          {deleteMode && (
+            <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-red-900/60 bg-red-950/20 px-4 py-3 text-sm">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={
+                    currentTransactions.length > 0 &&
+                    currentTransactions.every(({ originalIndex }) =>
+                      selectedTransactions.includes(originalIndex)
+                    )
+                  }
+                  onChange={toggleSelectAll}
+                  className="h-4 w-4"
+                />
+                <span className="font-medium">Select All</span>
+              </label>
+
+              <span className="text-inactive-text">
+                {selectedTransactions.length} selected
+              </span>
+
+              {selectedTransactions.length > 0 && (
+                <span className="text-xs text-red-300">
+                  Press Delete again to continue.
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-3">
             {currentTransactions.length === 0 && (
-              <p className="p-4 text-center text-sm text-zinc-600 dark:text-zinc-400">
-                No transactions found.
-              </p>
+              <div className="rounded-xl border border-zinc-800 bg-secondary p-8 text-center">
+                <p className="font-semibold">No transactions found.</p>
+                <p className="mt-1 text-sm text-inactive-text">
+                  Try changing your search or date filter.
+                </p>
+              </div>
             )}
 
-            {currentTransactions.map(
-              ({ transaction, originalIndex }) => (
-                <div
-                  key={transaction.id || originalIndex}
-                  onClick={() =>
-                    openEditPopup(originalIndex)
-                  }
-                  className={`mb-2 flex items-center rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 ${
-                    editMode
-                      ? "cursor-pointer border-blue-500"
-                      : ""
+            {currentTransactions.map(({ transaction, originalIndex }) => (
+              <div
+                key={transaction.id || originalIndex}
+                onClick={() => openEditPopup(originalIndex)}
+                className={`flex items-center gap-4 rounded-xl border bg-secondary p-4 transition ${
+                  editMode
+                    ? "cursor-pointer border-blue-500 hover:bg-blue-500/5"
+                    : "border-zinc-800 hover:border-zinc-700"
+                }`}
+              >
+                {deleteMode && (
+                  <input
+                    type="checkbox"
+                    checked={selectedTransactions.includes(originalIndex)}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={() => toggleSelectTransaction(originalIndex)}
+                    className="h-4 w-4 shrink-0"
+                  />
+                )}
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold">
+                    {transaction.description}
+                  </p>
+
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-inactive-text">
+                    <span>{transaction.type}</span>
+                    <span>•</span>
+                    <span>{transaction.date}</span>
+                  </div>
+                </div>
+
+                <span
+                  className={`hidden rounded-full border px-3 py-1 text-xs font-medium sm:inline-flex ${
+                    transaction.type === "Income"
+                      ? "border-green-700 bg-green-500/10 text-green-400"
+                      : transaction.type === "Debt"
+                        ? "border-yellow-700 bg-yellow-500/10 text-yellow-300"
+                        : "border-red-800 bg-red-500/10 text-red-400"
                   }`}
                 >
-                  {deleteMode && (
-                    <input
-                      type="checkbox"
-                      checked={selectedTransactions.includes(
-                        originalIndex
-                      )}
-                      onClick={(event) =>
-                        event.stopPropagation()
-                      }
-                      onChange={() =>
-                        toggleSelectTransaction(
-                          originalIndex
-                        )
-                      }
-                      className="mr-3"
-                    />
-                  )}
+                  {transaction.category}
+                </span>
 
-                  <div className="flex-1">
-                    <p className="font-bold">
-                      {transaction.description}
-                    </p>
-
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                      {transaction.type} |{" "}
-                      {transaction.date}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`rounded-full border px-4 py-1 text-xs ${
-                      transaction.type === "Income"
-                        ? "border-green-500 text-green-600 dark:text-green-400"
-                        : transaction.type === "Debt"
-                          ? "border-yellow-500 text-yellow-600 dark:text-yellow-400"
-                          : "border-red-500 text-red-600 dark:text-red-400"
-                    }`}
-                  >
-                    {transaction.category}
-                  </span>
-
-                  <p
-                    className={`w-40 text-right text-xs ${
-                      transaction.type === "Income"
-                        ? "text-green-600 dark:text-green-400"
-                        : transaction.type === "Debt"
-                          ? "text-yellow-600 dark:text-yellow-400"
-                          : "text-red-600 dark:text-red-400"
-                    }`}
-                  >
-                    {transaction.type === "Income"
-                      ? "+"
-                      : "-"}
-                    {formatCurrency(
-                      transaction.amount
-                    )}
-                  </p>
-                </div>
-              )
-            )}
+                <p
+                  className={`min-w-28 text-right text-sm font-bold ${
+                    transaction.type === "Income"
+                      ? "text-green-400"
+                      : transaction.type === "Debt"
+                        ? "text-yellow-300"
+                        : "text-red-400"
+                  }`}
+                >
+                  {transaction.type === "Income" ? "+" : "-"}
+                  {formatCurrency(transaction.amount)}
+                </p>
+              </div>
+            ))}
           </div>
 
           {/* Pagination controls */}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            {/* Transaction count dropdown */}
+          <div className="mt-6 flex flex-col gap-4 border-t border-zinc-800 pt-5 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <label
                 htmlFor="transactions-per-page"
-                className="text-sm text-zinc-600 dark:text-zinc-300"
+                className="text-sm text-inactive-text"
               >
                 Transactions per page:
               </label>
@@ -805,13 +835,11 @@ export default function TransactionsPage() {
                 id="transactions-per-page"
                 value={transactionsPerPage}
                 onChange={(event) => {
-                  setTransactionsPerPage(
-                    Number(event.target.value)
-                  );
+                  setTransactionsPerPage(Number(event.target.value));
                   setCurrentPage(1);
                   setSelectedTransactions([]);
                 }}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-black outline-none focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                className="rounded-lg border border-zinc-700 bg-secondary px-3 py-2 text-sm text-text outline-none transition focus:border-blue-500"
               >
                 <option value={10}>10</option>
                 <option value={15}>15</option>
@@ -820,18 +848,14 @@ export default function TransactionsPage() {
               </select>
             </div>
 
-            {/* Page buttons */}
             {totalPages > 1 && (
               <div className="max-w-full overflow-x-auto">
-                <div className="flex min-w-max items-center gap-2 px-1">
+                <div className="flex min-w-max items-center gap-2">
                   <button
-                    onClick={() =>
-                      setCurrentPage(
-                        (page) => page - 1
-                      )
-                    }
+                    type="button"
+                    onClick={() => setCurrentPage((page) => page - 1)}
                     disabled={currentPage === 1}
-                    className="rounded bg-white px-3 py-1 text-black hover:bg-zinc-200 disabled:bg-zinc-300 disabled:text-zinc-500 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
+                    className="rounded-lg border border-zinc-700 bg-secondary px-3 py-2 text-sm transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     &lt;
                   </button>
@@ -841,17 +865,13 @@ export default function TransactionsPage() {
                     (_, index) => index + 1
                   ).map((pageNumber) => (
                     <button
+                      type="button"
                       key={pageNumber}
-                      onClick={() =>
-                        setCurrentPage(
-                          pageNumber
-                        )
-                      }
-                      className={`rounded px-3 py-1 ${
-                        currentPage ===
-                        pageNumber
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-black hover:bg-zinc-200 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
+                      onClick={() => setCurrentPage(pageNumber)}
+                      className={`rounded-lg border px-3 py-2 text-sm transition ${
+                        currentPage === pageNumber
+                          ? "border-blue-500 bg-blue-600 text-white"
+                          : "border-zinc-700 bg-secondary hover:border-zinc-500"
                       }`}
                     >
                       {pageNumber}
@@ -859,15 +879,10 @@ export default function TransactionsPage() {
                   ))}
 
                   <button
-                    onClick={() =>
-                      setCurrentPage(
-                        (page) => page + 1
-                      )
-                    }
-                    disabled={
-                      currentPage === totalPages
-                    }
-                    className="rounded bg-white px-3 py-1 text-black hover:bg-zinc-200 disabled:bg-zinc-300 disabled:text-zinc-500 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
+                    type="button"
+                    onClick={() => setCurrentPage((page) => page + 1)}
+                    disabled={currentPage === totalPages}
+                    className="rounded-lg border border-zinc-700 bg-secondary px-3 py-2 text-sm transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     &gt;
                   </button>
@@ -876,397 +891,382 @@ export default function TransactionsPage() {
             )}
           </div>
 
-          {/* Result count */}
           {filteredTransactionsWithIndex.length > 0 && (
-            <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-              Showing{" "}
-              {startIndex + 1}–
-              {Math.min(
-                endIndex,
-                filteredTransactionsWithIndex.length
-              )}{" "}
-              of{" "}
-              {filteredTransactionsWithIndex.length}{" "}
-              transactions
+            <p className="mt-4 text-xs text-inactive-text">
+              Showing {startIndex + 1}–
+              {Math.min(endIndex, filteredTransactionsWithIndex.length)} of{" "}
+              {filteredTransactionsWithIndex.length} transactions
             </p>
           )}
-        </div>
-      </div>
+        </section>
 
-      {/* Filter popup */}
-      {showDuplicateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="relative max-h-[85vh] w-[min(620px,100%)] overflow-y-auto rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
-            <button
-              onClick={() => setShowDuplicateModal(false)}
-              className="absolute right-4 top-4 rounded-lg bg-zinc-200 px-3 py-1 font-bold text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-            >
-              X
-            </button>
-
-            <h2 className="mb-2 pr-10 text-2xl font-bold">
-              Duplicate transactions
-            </h2>
-            <p className="mb-5 text-sm text-zinc-600 dark:text-zinc-400">
-              One copy from each group will be kept. The {duplicateCount} newer duplicate{duplicateCount === 1 ? "" : "s"} will be removed.
-            </p>
-
-            <div className="mb-6 space-y-3">
-              {duplicateGroups.map((group) => (
-                <div
-                  key={group.duplicateIds.join("-")}
-                  className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700"
-                >
-                  <p className="font-bold">{group.transaction.description}</p>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    {group.transaction.date} · {group.transaction.type} · {group.transaction.category} · {formatCurrency(group.transaction.amount)}
-                  </p>
-                  <p className="mt-2 text-sm">
-                    {group.count} identical copies found; {group.duplicateIds.length} will be removed.
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex gap-3">
+        {showDuplicateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+            <div className="relative max-h-[85vh] w-full max-w-[620px] overflow-y-auto rounded-2xl border border-zinc-800 bg-widget p-6 text-text shadow-2xl">
               <button
+                type="button"
                 onClick={() => setShowDuplicateModal(false)}
-                className="w-full rounded-lg bg-zinc-200 py-3 font-bold text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+                className="absolute right-4 top-4 rounded-lg border border-zinc-700 bg-secondary px-3 py-1.5 font-bold transition hover:border-zinc-500"
+                aria-label="Close duplicate review"
               >
-                Cancel
-              </button>
-              <button
-                onClick={() => setShowDuplicateConfirm(true)}
-                className="w-full rounded-lg bg-red-600 py-3 font-bold text-white hover:bg-red-700"
-              >
-                Remove duplicates
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showDuplicateConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
-          <div className="w-[430px] max-w-full rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
-            <h2 className="mb-4 text-2xl font-bold">Remove duplicate transactions?</h2>
-            <p className="mb-6 text-sm">
-              {duplicateCount} duplicate transaction{duplicateCount === 1 ? "" : "s"} will be permanently removed. One copy from each group will remain.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={cancelDuplicateCleanup}
-                disabled={isRemovingDuplicates}
-                className="w-full rounded-lg bg-zinc-200 py-3 font-bold text-black hover:bg-zinc-300 disabled:opacity-60 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDuplicateCleanup}
-                disabled={isRemovingDuplicates}
-                className="w-full rounded-lg bg-red-600 py-3 font-bold text-white hover:bg-red-700 disabled:opacity-60"
-              >
-                {isRemovingDuplicates ? "Removing..." : "Confirm removal"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showFilterPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="relative w-[420px] rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
-            <button
-              onClick={() =>
-                setShowFilterPopup(false)
-              }
-              className="absolute right-4 top-4 rounded-lg bg-zinc-200 px-3 py-1 font-bold text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-            >
-              X
-            </button>
-
-            <h2 className="mb-4 text-2xl font-bold">
-              Filter by Date
-            </h2>
-
-            <div className="mb-4 grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block">
-                  Start Date
-                </label>
-
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(event) => {
-                    setStartDate(
-                      event.target.value
-                    );
-                    setCurrentPage(1);
-                  }}
-                  className="w-full rounded-lg border border-zinc-300 bg-white p-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block">
-                  End Date
-                </label>
-
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(event) => {
-                    setEndDate(
-                      event.target.value
-                    );
-                    setCurrentPage(1);
-                  }}
-                  className="w-full rounded-lg border border-zinc-300 bg-white p-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-                />
-              </div>
-            </div>
-
-            <div className="mb-5 grid grid-cols-3 gap-2">
-              <button
-                onClick={setLastWeekFilter}
-                className="rounded-lg bg-zinc-200 py-2 text-sm text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-              >
-                Last Week
+                X
               </button>
 
-              <button
-                onClick={() =>
-                  setMonthRangeFilter(1)
-                }
-                className="rounded-lg bg-zinc-200 py-2 text-sm text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-              >
-                Last Month
-              </button>
-
-              <button
-                onClick={() =>
-                  setMonthRangeFilter(6)
-                }
-                className="rounded-lg bg-zinc-200 py-2 text-sm text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-              >
-                Last 6 Months
-              </button>
-            </div>
-
-            <button
-              onClick={() => {
-                setCurrentPage(1);
-                setShowFilterPopup(false);
-              }}
-              className="w-full rounded-lg bg-blue-600 py-3 font-bold text-white hover:bg-blue-700"
-            >
-              Apply
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Add/Edit popup */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="relative w-[430px] rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
-            <h2 className="mb-4 text-3xl font-bold">
-              Delete transaction{selectedTransactions.length === 1 ? "" : "s"}?
-            </h2>
-
-            <p className="mb-6">
-              {selectedTransactions.length === 1
-                ? "This transaction will be permanently removed."
-                : `These ${selectedTransactions.length} transactions will be permanently removed.`}{" "}
-              This can&apos;t be undone.
-            </p>
-
-            <div className="flex gap-3">
-              <button
-                onClick={cancelDelete}
-                disabled={isDeleting}
-                className="w-full rounded-lg bg-zinc-200 py-3 font-bold text-black hover:bg-zinc-300 disabled:opacity-60 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={confirmDelete}
-                disabled={isDeleting}
-                className="w-full rounded-lg bg-red-600 py-3 font-bold text-white hover:bg-red-700 disabled:opacity-60"
-              >
-                {isDeleting ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="relative w-[430px] rounded-xl border border-zinc-300 bg-white p-6 text-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-white">
-            <button
-              onClick={cancelPopup}
-              className="absolute right-4 top-4 rounded-lg bg-zinc-200 px-3 py-1 font-bold text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-            >
-              X
-            </button>
-
-            <h2 className="mb-4 text-3xl font-bold">
-              {editingIndex === null
-                ? "New Transaction"
-                : "Edit Transaction"}
-            </h2>
-
-            {editingIndex === null && (
-              <div className="mb-4 rounded-lg border border-zinc-300 p-3 dark:border-zinc-700">
-                <CsvUpload
-                  onConfirmImport={
-                    handleConfirmCsvImport
-                  }
-                />
-              </div>
-            )}
-
-            <div className="mb-4 flex gap-2">
-              {(
-                [
-                  "Expense",
-                  "Income",
-                  "Debt",
-                ] as TransactionType[]
-              ).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => {
-                    setTransactionType(type);
-                    setCategory("");
-                  }}
-                  className={`rounded-lg px-4 py-2 font-bold ${
-                    transactionType === type
-                      ? "bg-blue-600 text-white"
-                      : "bg-zinc-200 text-black hover:bg-zinc-300 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-
-            <label className="mb-1 block">
-              Description
-              <span className="text-red-500">
-                *
-              </span>
-            </label>
-
-            <input
-              value={description}
-              onChange={(event) =>
-                setDescription(
-                  event.target.value
-                )
-              }
-              className="mb-3 w-full rounded-lg border border-zinc-300 bg-white p-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-            />
-
-            <label className="mb-1 block">
-              Amount
-              <span className="text-red-500">
-                *
-              </span>
-            </label>
-
-            <input
-              type="number"
-              value={amount}
-              onChange={(event) =>
-                setAmount(event.target.value)
-              }
-              className="mb-3 w-full rounded-lg border border-zinc-300 bg-white p-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-            />
-
-            <label className="mb-1 block">
-              Category
-            </label>
-
-            <select
-              value={category}
-              onChange={(event) =>
-                setCategory(
-                  event.target.value
-                )
-              }
-              className="mb-3 w-full rounded-lg border border-zinc-300 bg-white p-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-            >
-              <option value="">
-                Auto / Select Category
-              </option>
-
-              {categoryOptions[
-                transactionType
-              ].map((option) => (
-                <option
-                  key={option}
-                  value={option}
-                >
-                  {option}
-                </option>
-              ))}
-            </select>
-
-            <label className="mb-1 block">
-              Transaction Date
-              <span className="text-red-500">
-                *
-              </span>
-            </label>
-
-            <input
-              type="date"
-              value={transactionDate}
-              onChange={(event) =>
-                setTransactionDate(
-                  event.target.value
-                )
-              }
-              className="mb-5 w-full rounded-lg border border-zinc-300 bg-white p-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-            />
-
-            {errorMessage !== "" && (
-              <p className="mb-3 text-sm text-red-500 dark:text-red-400">
-                {errorMessage}
+              <p className="text-sm font-semibold uppercase tracking-wide text-amber-400">
+                Review
               </p>
-            )}
+              <h2 className="mt-1 pr-10 text-2xl font-bold">Duplicate transactions</h2>
+              <p className="mt-2 text-sm text-inactive-text">
+                One copy from each group will remain. The other {duplicateCount} transaction{duplicateCount === 1 ? "" : "s"} will be removed.
+              </p>
 
-            <div className="flex gap-2">
+              <div className="mt-5 space-y-3">
+                {duplicateGroups.map((group) => (
+                  <div
+                    key={group.duplicateIds.join("-")}
+                    className="rounded-xl border border-zinc-800 bg-secondary p-4"
+                  >
+                    <p className="font-semibold">{group.transaction.description}</p>
+                    <p className="mt-1 text-sm text-inactive-text">
+                      {group.transaction.date} · {group.transaction.type} · {group.transaction.category} · {formatCurrency(group.transaction.amount)}
+                    </p>
+                    <p className="mt-2 text-sm text-inactive-text">
+                      {group.count} identical copies found; {group.duplicateIds.length} will be removed.
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDuplicateModal(false)}
+                  className="w-full rounded-xl border border-zinc-700 bg-secondary py-3 font-semibold transition hover:border-zinc-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDuplicateConfirm(true)}
+                  className="w-full rounded-xl bg-red-600 py-3 font-semibold text-white transition hover:bg-red-700"
+                >
+                  Remove duplicates
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showDuplicateConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
+            <div className="w-full max-w-[430px] rounded-2xl border border-zinc-800 bg-widget p-6 text-text shadow-2xl">
+              <p className="text-sm font-semibold uppercase tracking-wide text-red-400">
+                Confirmation
+              </p>
+              <h2 className="mt-1 text-2xl font-bold">Remove duplicate transactions?</h2>
+              <p className="mt-3 text-sm leading-6 text-inactive-text">
+                {duplicateCount} duplicate transaction{duplicateCount === 1 ? "" : "s"} will be permanently removed. One copy from each group will remain.
+              </p>
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDuplicateConfirm(false)}
+                  disabled={isRemovingDuplicates}
+                  className="w-full rounded-xl border border-zinc-700 bg-secondary py-3 font-semibold transition hover:border-zinc-500 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDuplicateCleanup}
+                  disabled={isRemovingDuplicates}
+                  className="w-full rounded-xl bg-red-600 py-3 font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                >
+                  {isRemovingDuplicates ? "Removing..." : "Confirm removal"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Filter popup */}
+        {showFilterPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+            <div className="relative w-full max-w-[460px] rounded-2xl border border-zinc-800 bg-widget p-6 text-text shadow-2xl">
               <button
-                onClick={cancelPopup}
-                className="w-full rounded-lg bg-zinc-200 py-3 font-bold text-black hover:bg-zinc-300 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
+                type="button"
+                onClick={() => setShowFilterPopup(false)}
+                className="absolute right-4 top-4 rounded-lg border border-zinc-700 bg-secondary p-2 transition hover:border-zinc-500"
+                aria-label="Close filter"
               >
-                Cancel
+                <X size={18} />
               </button>
 
+              <p className="text-sm font-semibold uppercase tracking-wide text-blue-400">
+                Filter
+              </p>
+              <h2 className="mt-1 text-2xl font-bold">Filter by Date</h2>
+              <p className="mt-2 text-sm text-inactive-text">
+                Choose a custom date range or use one of the quick options below.
+              </p>
+
+              <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-medium">
+                    Start Date
+                  </label>
+
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(event) => {
+                      setStartDate(event.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full rounded-xl border border-zinc-700 bg-secondary p-3 text-text outline-none transition focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium">
+                    End Date
+                  </label>
+
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(event) => {
+                      setEndDate(event.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full rounded-xl border border-zinc-700 bg-secondary p-3 text-text outline-none transition focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={setLastWeekFilter}
+                  className="rounded-xl border border-zinc-700 bg-secondary py-2.5 text-sm transition hover:border-zinc-500"
+                >
+                  Last Week
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMonthRangeFilter(1)}
+                  className="rounded-xl border border-zinc-700 bg-secondary py-2.5 text-sm transition hover:border-zinc-500"
+                >
+                  Last Month
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMonthRangeFilter(6)}
+                  className="rounded-xl border border-zinc-700 bg-secondary py-2.5 text-sm transition hover:border-zinc-500"
+                >
+                  Last 6 Months
+                </button>
+              </div>
+
               <button
-                onClick={
-                  editingIndex === null
-                    ? addTransaction
-                    : confirmEditTransaction
-                }
-                disabled={isCategorising}
-                className="w-full rounded-lg bg-blue-600 py-3 font-bold text-white hover:bg-blue-700 disabled:opacity-60"
+                type="button"
+                onClick={() => {
+                  setCurrentPage(1);
+                  setShowFilterPopup(false);
+                }}
+                className="mt-6 w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700"
               >
-                {isCategorising
-                  ? "Categorising..."
-                  : editingIndex === null
-                    ? "Add Transaction"
-                    : "Confirm Edit"}
+                Apply Filter
               </button>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {/* Delete confirmation */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+            <div className="w-full max-w-[460px] rounded-2xl border border-zinc-800 bg-widget p-6 text-text shadow-2xl">
+              <p className="text-sm font-semibold uppercase tracking-wide text-red-400">
+                Confirmation
+              </p>
+
+              <h2 className="mt-1 text-2xl font-bold">
+                Delete transaction{selectedTransactions.length === 1 ? "" : "s"}?
+              </h2>
+
+              <p className="mt-3 text-sm leading-6 text-inactive-text">
+                {selectedTransactions.length === 1
+                  ? "This transaction will be permanently removed."
+                  : `These ${selectedTransactions.length} transactions will be permanently removed.`}{" "}
+                This can&apos;t be undone.
+              </p>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={cancelDelete}
+                  disabled={isDeleting}
+                  className="w-full rounded-xl border border-zinc-700 bg-secondary py-3 font-semibold transition hover:border-zinc-500 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmDelete}
+                  disabled={isDeleting}
+                  className="w-full rounded-xl bg-red-600 py-3 font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                >
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add/Edit popup */}
+        {showPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+            <div className="relative max-h-[90vh] w-full max-w-[500px] overflow-y-auto rounded-2xl border border-zinc-800 bg-widget p-6 text-text shadow-2xl">
+              <button
+                type="button"
+                onClick={cancelPopup}
+                className="absolute right-4 top-4 rounded-lg border border-zinc-700 bg-secondary p-2 transition hover:border-zinc-500"
+                aria-label="Close transaction form"
+              >
+                <X size={18} />
+              </button>
+
+              <p className="text-sm font-semibold uppercase tracking-wide text-blue-400">
+                {editingIndex === null ? "Create" : "Update"}
+              </p>
+
+              <h2 className="mt-1 text-2xl font-bold">
+                {editingIndex === null ? "New Transaction" : "Edit Transaction"}
+              </h2>
+
+              {editingIndex === null && (
+                <div className="mt-5 rounded-xl border border-zinc-800 bg-secondary p-4">
+                  <CsvUpload onConfirmImport={handleConfirmCsvImport} />
+                </div>
+              )}
+
+              <div className="mt-5 grid grid-cols-3 gap-2">
+                {(["Expense", "Income", "Debt"] as TransactionType[]).map(
+                  (type) => (
+                    <button
+                      type="button"
+                      key={type}
+                      onClick={() => {
+                        setTransactionType(type);
+                        setCategory("");
+                      }}
+                      className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
+                        transactionType === type
+                          ? "border-blue-500 bg-blue-600 text-white"
+                          : "border-zinc-700 bg-secondary hover:border-zinc-500"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  )
+                )}
+              </div>
+
+              <div className="mt-5">
+                <label className="mb-2 block text-sm font-medium">
+                  Description <span className="text-red-400">*</span>
+                </label>
+
+                <input
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 bg-secondary p-3 text-text outline-none transition focus:border-blue-500"
+                />
+              </div>
+
+              <div className="mt-4">
+                <label className="mb-2 block text-sm font-medium">
+                  Amount <span className="text-red-400">*</span>
+                </label>
+
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(event) => setAmount(event.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 bg-secondary p-3 text-text outline-none transition focus:border-blue-500"
+                />
+              </div>
+
+              <div className="mt-4">
+                <label className="mb-2 block text-sm font-medium">Category</label>
+
+                <select
+                  value={category}
+                  onChange={(event) => setCategory(event.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 bg-secondary p-3 text-text outline-none transition focus:border-blue-500"
+                >
+                  <option value="">Auto / Select Category</option>
+
+                  {categoryOptions[transactionType].map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mt-4">
+                <label className="mb-2 block text-sm font-medium">
+                  Transaction Date <span className="text-red-400">*</span>
+                </label>
+
+                <input
+                  type="date"
+                  value={transactionDate}
+                  onChange={(event) => setTransactionDate(event.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 bg-secondary p-3 text-text outline-none transition focus:border-blue-500"
+                />
+              </div>
+
+              {errorMessage !== "" && (
+                <div className="mt-4 rounded-xl border border-red-900/60 bg-red-950/20 p-3">
+                  <p className="text-sm text-red-300">{errorMessage}</p>
+                </div>
+              )}
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={cancelPopup}
+                  className="w-full rounded-xl border border-zinc-700 bg-secondary py-3 font-semibold transition hover:border-zinc-500"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={
+                    editingIndex === null
+                      ? addTransaction
+                      : confirmEditTransaction
+                  }
+                  disabled={isCategorising}
+                  className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {isCategorising
+                    ? "Categorising..."
+                    : editingIndex === null
+                      ? "Add Transaction"
+                      : "Confirm Edit"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
