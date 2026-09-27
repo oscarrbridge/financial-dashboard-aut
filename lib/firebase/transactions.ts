@@ -97,6 +97,25 @@ export async function deleteTransactionFromFirestore(
   await deleteDoc(transactionRef);
 }
 
+export async function deleteTransactionsBatchFromFirestore(
+  uid: string,
+  transactionIds: string[]
+) {
+  const transactionsRef = collection(db, "users", uid, "transactions");
+  const chunkSize = 500;
+
+  for (let i = 0; i < transactionIds.length; i += chunkSize) {
+    const batch = writeBatch(db);
+    const chunk = transactionIds.slice(i, i + chunkSize);
+
+    chunk.forEach((transactionId) => {
+      batch.delete(doc(transactionsRef, transactionId));
+    });
+
+    await batch.commit();
+  }
+}
+
 export async function addTransactionsBatchToFirestore(
   uid: string,
   transactions: Transaction[]
