@@ -469,9 +469,6 @@ export default function TransactionsPage() {
     <div className="mx-auto min-h-screen w-full max-w-[900px] bg-white text-black dark:bg-black dark:text-white">
       {/* Sticky top area */}
       <div className="sticky top-0 z-40 bg-white px-8 pb-4 pt-8 dark:bg-black">
-        <h1 className="mb-10 text-2xl">
-          Welcome back &lt;user&gt;
-        </h1>
 
         {/* Summary */}
         <div className="mb-6 grid grid-cols-3 rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900">

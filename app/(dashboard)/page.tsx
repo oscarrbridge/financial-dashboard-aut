@@ -278,6 +278,8 @@ export default function DashboardPage() {
 
   return (
     <div className='flex flex-col w-full h-full p-6 gap-5'>
+      <h1 className='w-full text-2xl'>Welcome back {user?.displayName ?? 'User'}</h1>
+
       <div className='w-full flex justify-end'>
         <Wrapper className='h-2'>
           <div className='flex flex-row'>

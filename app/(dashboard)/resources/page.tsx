@@ -453,9 +453,6 @@ export default function ResourcesPage() {
   return (
     <div className="min-h-screen w-full max-w-[900px] bg-white px-8 pb-12 text-black dark:bg-black dark:text-white">
       {/* Page heading */}
-      <div className="pt-8">
-        <h1 className="mb-7 text-2xl">Welcome back &lt;user&gt;</h1>
-      </div>
 
       {/* Sticky navigation */}
       <div className="sticky top-0 z-40 mb-5 bg-white py-2 dark:bg-black">
