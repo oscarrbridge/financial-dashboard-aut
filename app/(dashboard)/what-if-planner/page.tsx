@@ -10,7 +10,7 @@ import {
 
   RefreshCcw,
 
-  WalletCards,
+  TrendingUp,
 
 } from "lucide-react";
 
@@ -428,33 +428,19 @@ export default function WhatIfPlannerPage() {
 
         <div className="mb-8">
 
-          <div className="mb-2 flex items-center gap-3">
+          <h1 className="text-3xl font-bold">
 
-            <div className="rounded-xl bg-blue-600/15 p-3 text-blue-400">
+            What-If Planner
 
-              <WalletCards size={26} />
+          </h1>
 
-            </div>
+          <p className="mt-1 text-inactive-text">
 
-            <div>
+            Compare your current monthly budget with
 
-              <h1 className="text-3xl font-bold">
+            a custom spending scenario.
 
-                What-If Planner
-
-              </h1>
-
-              <p className="mt-1 text-inactive-text">
-
-                Compare your current monthly budget with
-
-                a custom spending scenario.
-
-              </p>
-
-            </div>
-
-          </div>
+          </p>
 
         </div>
 
@@ -542,7 +528,11 @@ export default function WhatIfPlannerPage() {
 
               <p className="mt-2 text-xs text-inactive-text">
 
-                Used for both scenarios
+                Initial value based on income transactions from the last 30 days.
+
+                <br />
+
+                Used for both scenarios.
 
               </p>
 
@@ -934,7 +924,7 @@ export default function WhatIfPlannerPage() {
 
         </section>
 
-        {/* Comparison Preview */}
+        {/* Comparison Results */}
 
         {showResults && (
 
@@ -948,7 +938,7 @@ export default function WhatIfPlannerPage() {
 
             <h2 className="mt-1 text-2xl font-bold">
 
-              Basic Scenario Comparison
+              Scenario Comparison
 
             </h2>
 
@@ -962,9 +952,9 @@ export default function WhatIfPlannerPage() {
 
               </span>
 
-              . A basic monthly comparison is shown below. Detailed charts and
+              . The summary below compares the main financial differences
 
-              insights can be added in the next development stage.
+              and monthly spending categories.
 
             </p>
 
@@ -1164,101 +1154,95 @@ export default function WhatIfPlannerPage() {
 
             <div className="mt-6 rounded-xl bg-secondary p-5">
 
-              <div className="flex items-start gap-3">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 
-                <BarChart3
+                <div className="flex items-start gap-3">
 
-                  size={21}
+                  <BarChart3
 
-                  className="mt-0.5 shrink-0 text-blue-400"
+                    size={21}
 
-                />
+                    className="mt-0.5 shrink-0 text-blue-400"
 
-                <div>
+                  />
 
-                  <h3 className="text-xl font-semibold">
+                  <div>
 
-                    Monthly Spending by Category
+                    <h3 className="text-xl font-semibold">
 
-                  </h3>
+                      Monthly Spending by Category
 
-                  <p className="mt-1 text-sm text-inactive-text">
+                    </h3>
 
-                    Compare Scenario 1 and Scenario 2 across each monthly expense category.
+                    <p className="mt-1 text-sm text-inactive-text">
 
-                  </p>
+                      Scenario 1 and Scenario 2 spending by category.
+
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <div className="flex shrink-0 flex-wrap gap-4 text-xs text-inactive-text">
+
+                  <div className="flex items-center gap-2">
+
+                    <span className="h-2.5 w-2.5 rounded-sm bg-blue-500" />
+
+                    Scenario 1
+
+                  </div>
+
+                  <div className="flex items-center gap-2">
+
+                    <span className="h-2.5 w-2.5 rounded-sm bg-violet-500" />
+
+                    Scenario 2
+
+                  </div>
 
                 </div>
 
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-5 text-xs text-inactive-text">
+              <div className="mt-5 overflow-x-auto">
 
-                <div className="flex items-center gap-2">
+                <div className="min-w-[680px] space-y-3">
 
-                  <span className="h-2.5 w-2.5 rounded-sm bg-blue-500" />
+                  {EXPENSE_CATEGORIES.map((category) => {
 
-                  Scenario 1
+                    const currentAmount = currentScenario[category] ?? 0;
 
-                </div>
+                    const customAmount = appliedScenario[category] ?? 0;
 
-                <div className="flex items-center gap-2">
+                    const currentWidth =
 
-                  <span className="h-2.5 w-2.5 rounded-sm bg-violet-500" />
+                      (currentAmount / maxCategoryAmount) * 100;
 
-                  Scenario 2
+                    const customWidth =
 
-                </div>
+                      (customAmount / maxCategoryAmount) * 100;
 
-              </div>
+                    return (
 
-              <div className="mt-6 space-y-6">
+                      <div
 
-                {EXPENSE_CATEGORIES.map((category) => {
+                        key={category}
 
-                  const currentAmount = currentScenario[category] ?? 0;
+                        className="grid grid-cols-[140px_1fr_190px] items-center gap-3"
 
-                  const customAmount = appliedScenario[category] ?? 0;
+                      >
 
-                  const currentWidth = (currentAmount / maxCategoryAmount) * 100;
-
-                  const customWidth = (customAmount / maxCategoryAmount) * 100;
-
-                  return (
-
-                    <div key={category}>
-
-                      <div className="mb-2 flex items-center justify-between gap-4">
-
-                        <p className="text-sm font-semibold">
+                        <p className="truncate text-sm font-medium" title={category}>
 
                           {category}
 
                         </p>
 
-                        <p className="text-xs text-inactive-text">
+                        <div className="space-y-1.5">
 
-                          {formatCurrency(currentAmount)}
-
-                          {" → "}
-
-                          {formatCurrency(customAmount)}
-
-                        </p>
-
-                      </div>
-
-                      <div className="space-y-2">
-
-                        <div className="grid grid-cols-[18px_1fr] items-center gap-2">
-
-                          <span className="text-xs text-inactive-text">
-
-                            1
-
-                          </span>
-
-                          <div className="h-3 overflow-hidden rounded-full bg-zinc-800">
+                          <div className="h-2.5 overflow-hidden rounded-full bg-zinc-800">
 
                             <div
 
@@ -1270,17 +1254,7 @@ export default function WhatIfPlannerPage() {
 
                           </div>
 
-                        </div>
-
-                        <div className="grid grid-cols-[18px_1fr] items-center gap-2">
-
-                          <span className="text-xs text-inactive-text">
-
-                            2
-
-                          </span>
-
-                          <div className="h-3 overflow-hidden rounded-full bg-zinc-800">
+                          <div className="h-2.5 overflow-hidden rounded-full bg-zinc-800">
 
                             <div
 
@@ -1294,16 +1268,54 @@ export default function WhatIfPlannerPage() {
 
                         </div>
 
+                        <p className="text-right text-xs text-inactive-text">
+
+                          {formatCurrency(currentAmount)}
+
+                          {" → "}
+
+                          {formatCurrency(customAmount)}
+
+                        </p>
+
                       </div>
 
-                    </div>
+                    );
 
-                  );
+                  })}
 
-                })}
+                </div>
 
               </div>
 
+            </div>
+
+            {/* Projected Savings */}
+            <div className="mt-6 rounded-xl bg-secondary p-5">
+              <div className="flex items-start gap-3">
+                <TrendingUp
+                  size={21}
+                  className="mt-0.5 shrink-0 text-green-400"
+                />
+
+                <div>
+                  <h3 className="text-xl font-semibold">
+                    Projected Savings
+                  </h3>
+
+                  <p className="mt-1 text-sm text-inactive-text">
+                    Projection over the next 12 months if the same monthly income
+                    and spending continue.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <ProjectionChart
+                  currentMonthly={currentRemaining}
+                  customMonthly={customRemaining}
+                />
+              </div>
             </div>
 
           </section>
@@ -1316,6 +1328,225 @@ export default function WhatIfPlannerPage() {
 
   );
 
+}
+
+type ProjectionChartProps = {
+  currentMonthly: number;
+  customMonthly: number;
+};
+
+function ProjectionChart({
+  currentMonthly,
+  customMonthly,
+}: ProjectionChartProps) {
+  const width = 900;
+  const height = 260;
+
+  const paddingLeft = 60;
+  const paddingRight = 20;
+  const paddingTop = 20;
+  const paddingBottom = 42;
+
+  const chartWidth = width - paddingLeft - paddingRight;
+  const chartHeight = height - paddingTop - paddingBottom;
+
+  const currentValues = Array.from(
+    { length: 13 },
+    (_, month) => currentMonthly * month
+  );
+
+  const customValues = Array.from(
+    { length: 13 },
+    (_, month) => customMonthly * month
+  );
+
+  const allValues = [0, ...currentValues, ...customValues];
+  const minimum = Math.min(...allValues);
+  const maximum = Math.max(...allValues);
+  const range = maximum - minimum || 1;
+
+  const getX = (month: number) =>
+    paddingLeft + (month / 12) * chartWidth;
+
+  const getY = (value: number) =>
+    paddingTop + ((maximum - value) / range) * chartHeight;
+
+  const currentPoints = currentValues
+    .map((value, month) => `${getX(month)},${getY(value)}`)
+    .join(" ");
+
+  const customPoints = customValues
+    .map((value, month) => `${getX(month)},${getY(value)}`)
+    .join(" ");
+
+  const zeroY = getY(0);
+  const monthLabels = [0, 3, 6, 9, 12];
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap gap-4 text-xs text-inactive-text">
+        <div className="flex items-center gap-2">
+          <span className="h-1 w-6 rounded bg-blue-500" />
+          Scenario 1
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="h-1 w-6 rounded bg-violet-500" />
+          Scenario 2
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="min-w-[680px] w-full"
+          role="img"
+          aria-label="Projected savings comparison over 12 months"
+        >
+          {[0, 0.25, 0.5, 0.75, 1].map((position) => {
+            const y = paddingTop + chartHeight * position;
+
+            return (
+              <line
+                key={position}
+                x1={paddingLeft}
+                x2={width - paddingRight}
+                y1={y}
+                y2={y}
+                stroke="currentColor"
+                className="text-zinc-800"
+                strokeWidth="1"
+              />
+            );
+          })}
+
+          <line
+            x1={paddingLeft}
+            x2={width - paddingRight}
+            y1={zeroY}
+            y2={zeroY}
+            stroke="currentColor"
+            className="text-zinc-500"
+            strokeWidth="1.5"
+            strokeDasharray="6 5"
+          />
+
+          <polyline
+            points={currentPoints}
+            fill="none"
+            stroke="currentColor"
+            className="text-blue-500"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          <polyline
+            points={customPoints}
+            fill="none"
+            stroke="currentColor"
+            className="text-violet-500"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {monthLabels.map((month) => (
+            <g key={month}>
+              <line
+                x1={getX(month)}
+                x2={getX(month)}
+                y1={paddingTop}
+                y2={height - paddingBottom}
+                stroke="currentColor"
+                className="text-zinc-800"
+                strokeWidth="1"
+              />
+
+              <text
+                x={getX(month)}
+                y={height - 14}
+                textAnchor="middle"
+                fill="currentColor"
+                className="text-inactive-text"
+                fontSize="13"
+              >
+                {month === 0 ? "Now" : `${month} mo`}
+              </text>
+            </g>
+          ))}
+
+          <text
+            x={8}
+            y={getY(maximum) + 5}
+            fill="currentColor"
+            className="text-inactive-text"
+            fontSize="12"
+          >
+            {formatCompactCurrency(maximum)}
+          </text>
+
+          <text
+            x={8}
+            y={getY(minimum) + 5}
+            fill="currentColor"
+            className="text-inactive-text"
+            fontSize="12"
+          >
+            {formatCompactCurrency(minimum)}
+          </text>
+        </svg>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="rounded-xl bg-background p-4">
+          <p className="text-xs text-inactive-text">
+            Scenario 1 after 12 months
+          </p>
+
+          <p
+            className={`mt-1 text-lg font-bold ${
+              currentMonthly * 12 < 0
+                ? "text-red-400"
+                : "text-blue-400"
+            }`}
+          >
+            {formatCurrency(currentMonthly * 12)}
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-background p-4">
+          <p className="text-xs text-inactive-text">
+            Scenario 2 after 12 months
+          </p>
+
+          <p
+            className={`mt-1 text-lg font-bold ${
+              customMonthly * 12 < 0
+                ? "text-red-400"
+                : "text-violet-400"
+            }`}
+          >
+            {formatCurrency(customMonthly * 12)}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatCompactCurrency(value: number) {
+  const absolute = Math.abs(value);
+
+  if (absolute >= 1000000) {
+    return `${value < 0 ? "-" : ""}$${(absolute / 1000000).toFixed(1)}m`;
+  }
+
+  if (absolute >= 1000) {
+    return `${value < 0 ? "-" : ""}$${(absolute / 1000).toFixed(1)}k`;
+  }
+
+  return `${value < 0 ? "-" : ""}$${absolute.toFixed(0)}`;
 }
 
 type SummaryCardProps = {
