@@ -7,7 +7,6 @@ import {
   ChartBar,
   Scale,
   User,
-  Bell,
   NotebookPen,
 } from "lucide-react";
 import Image from "next/image";
@@ -15,10 +14,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import AccountWindow from "./accountWindow";
 import { requireAuth } from "@/lib/firebase/requireAuth";
-import {
-  getUserBudgets,
-  type BudgetPeriod,
-} from "@/lib/firebase/budgets";
+import { getUserBudgets, type BudgetPeriod } from "@/lib/firebase/budgets";
 import { getUserTransactions } from "@/lib/firebase/transactions";
 
 export default function NavBar() {
@@ -79,13 +75,9 @@ export default function NavBar() {
                 (transaction) =>
                   transaction.type === "Expense" &&
                   transaction.category === budget.category &&
-                  new Date(transaction.date) >= cutoff
+                  new Date(transaction.date) >= cutoff,
               )
-              .reduce(
-                (total, transaction) =>
-                  total + transaction.amount,
-                0
-              );
+              .reduce((total, transaction) => total + transaction.amount, 0);
 
             return spent > periodLimit * 0.8;
           });
@@ -93,10 +85,7 @@ export default function NavBar() {
 
         setHasBudgetAlerts(hasAlert);
       } catch (error) {
-        console.error(
-          "Error checking budget alerts:",
-          error
-        );
+        console.error("Error checking budget alerts:", error);
       }
     }
 
@@ -126,19 +115,12 @@ export default function NavBar() {
         active={pathName === "/transactions"}
       />
 
-      <NavIcon
-        icon={ChartBar}
-        text="Budgets"
-        link="/budgets"
-        active={pathName === "/budgets"}
-      />
-
       <div className="relative">
         <NavIcon
-          icon={Bell}
-          text="Alerts"
+          icon={ChartBar}
+          text="Budgets"
           link="/budgets"
-          active={false}
+          active={pathName === "/budgets"}
         />
 
         {hasBudgetAlerts && (
@@ -164,9 +146,7 @@ export default function NavBar() {
         <NavIcon
           icon={User}
           text="Account"
-          onClick={() =>
-            setAccountView(!accountView)
-          }
+          onClick={() => setAccountView(!accountView)}
         />
       </div>
 
@@ -174,9 +154,7 @@ export default function NavBar() {
         <>
           <div
             className="fixed inset-0 z-10"
-            onClick={() =>
-              setAccountView(false)
-            }
+            onClick={() => setAccountView(false)}
           />
 
           <AccountWindow />
