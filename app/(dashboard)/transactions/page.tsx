@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Trash2, Filter, ReceiptText, Search, Plus, X } from "lucide-react";
+
+import { Pencil, Trash2, Filter, Search, Plus, X } from "lucide-react";
+
 import CsvUpload from "../../components/csvUpload";
+
 import { requireAuth } from "@/lib/firebase/requireAuth";
+
 import { categoriseTransaction } from "@/lib/ai/categoriseTransaction";
+
 import {
   matchesTransactionFilter,
   normalizeCsvDate,
@@ -19,33 +24,45 @@ import {
   deleteTransactionFromFirestore,
 } from "@/lib/firebase/transactions";
 
-import { formatCurrency } from '@/lib/transactions/formatCurrency';
+import { formatCurrency } from "@/lib/transactions/formatCurrency";
 import { CATEGORIES_BY_TYPE } from "@/lib/categories";
 
 type TransactionType = "Expense" | "Income" | "Debt";
 
 type Transaction = {
   id?: string;
+
   description: string;
+
   amount: number;
+
   category: string;
+
   date: string;
+
   type: TransactionType;
+
   source?: "manual" | "csv";
 };
 
 type DuplicateGroup = {
   transaction: Transaction;
+
   duplicateIds: string[];
+
   count: number;
 };
 
 function getDuplicateKey(transaction: Transaction) {
   return [
     transaction.date.trim(),
+
     transaction.description.trim().toLowerCase(),
+
     transaction.type,
+
     transaction.category.trim().toLowerCase(),
+
     transaction.amount,
   ].join("\u001f");
 }
@@ -56,35 +73,54 @@ export default function TransactionsPage() {
   const { user, loading } = requireAuth();
 
   const [showPopup, setShowPopup] = useState(false);
+
   const [showFilterPopup, setShowFilterPopup] = useState(false);
 
   const [deleteMode, setDeleteMode] = useState(false);
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const [isDeleting, setIsDeleting] = useState(false);
+
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+
   const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false);
+
   const [isRemovingDuplicates, setIsRemovingDuplicates] = useState(false);
+
   const [editMode, setEditMode] = useState(false);
+
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  const [selectedTransactions, setSelectedTransactions] = useState<number[]>([]);
+  const [selectedTransactions, setSelectedTransactions] = useState<number[]>(
+    [],
+  );
+
   const [searchText, setSearchText] = useState("");
+
   const [startDate, setStartDate] = useState("");
+
   const [endDate, setEndDate] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
 
   // Number of transactions shown per page.
+
   const [transactionsPerPage, setTransactionsPerPage] = useState(15);
 
   const [transactionType, setTransactionType] =
     useState<TransactionType>("Expense");
 
   const [description, setDescription] = useState("");
+
   const [amount, setAmount] = useState("");
+
   const [category, setCategory] = useState("");
+
   const [transactionDate, setTransactionDate] = useState("");
+
   const [errorMessage, setErrorMessage] = useState("");
+
   const [isCategorising, setIsCategorising] = useState(false);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -94,26 +130,37 @@ export default function TransactionsPage() {
 
     transactions.forEach((transaction) => {
       const key = getDuplicateKey(transaction);
+
       const group = grouped.get(key) ?? [];
+
       group.push(transaction);
+
       grouped.set(key, group);
     });
 
     return Array.from(grouped.values())
+
       .filter((group) => group.length > 1)
+
       .map((group) => ({
         transaction: group[group.length - 1],
+
         duplicateIds: group
+
           .slice(0, -1)
+
           .map((transaction) => transaction.id)
+
           .filter((id): id is string => Boolean(id)),
+
         count: group.length,
       }));
   }, [transactions]);
 
   const duplicateCount = duplicateGroups.reduce(
     (count, group) => count + group.duplicateIds.length,
-    0
+
+    0,
   );
 
   const duplicateIds = duplicateGroups.flatMap((group) => group.duplicateIds);
@@ -121,91 +168,117 @@ export default function TransactionsPage() {
   const isFilterActive = startDate !== "" || endDate !== "";
 
   const formatDate = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+    const year = date.getFullYear();
 
-  return `${year}-${month}-${day}`;
-};
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
 
   const setLastWeekFilter = () => {
     const today = new Date();
+
     const lastWeek = new Date();
 
     lastWeek.setDate(today.getDate() - 7);
 
     setStartDate(formatDate(lastWeek));
+
     setEndDate(formatDate(today));
+
     setCurrentPage(1);
   };
 
   const setMonthRangeFilter = (monthsAgo: number) => {
     const today = new Date();
+
     const pastDate = new Date();
 
     pastDate.setMonth(today.getMonth() - monthsAgo);
 
     setStartDate(formatDate(pastDate));
+
     setEndDate(formatDate(today));
+
     setCurrentPage(1);
   };
 
   const filterCriteria = {
     searchText,
+
     startDate,
+
     endDate,
   };
 
   const filteredTransactionsWithIndex = transactions
+
     .map((transaction, originalIndex) => ({
       transaction,
+
       originalIndex,
     }))
+
     .filter(({ transaction }) =>
-      matchesTransactionFilter(transaction, filterCriteria)
+      matchesTransactionFilter(transaction, filterCriteria),
     );
 
   const totalPages = Math.ceil(
-    filteredTransactionsWithIndex.length / transactionsPerPage
+    filteredTransactionsWithIndex.length / transactionsPerPage,
   );
 
   const startIndex = (currentPage - 1) * transactionsPerPage;
+
   const endIndex = startIndex + transactionsPerPage;
 
   const currentTransactions = filteredTransactionsWithIndex.slice(
     startIndex,
-    endIndex
+
+    endIndex,
   );
 
   const resetForm = () => {
     setDescription("");
+
     setAmount("");
+
     setCategory("");
+
     setTransactionDate("");
+
     setTransactionType("Expense");
+
     setEditingIndex(null);
+
     setErrorMessage("");
+
     setIsCategorising(false);
   };
 
   const addTransaction = async () => {
     if (description.trim() === "") {
       setErrorMessage("Please enter a description.");
+
       return;
     }
 
     if (amount === "") {
       setErrorMessage("Please enter an amount.");
+
       return;
     }
 
     if (Number(amount) <= 0) {
       setErrorMessage("Amount must be greater than 0.");
+
       return;
     }
 
     if (transactionDate === "") {
       setErrorMessage("Please select a transaction date.");
+
       return;
     }
 
@@ -214,6 +287,7 @@ export default function TransactionsPage() {
     }
 
     setErrorMessage("");
+
     setIsCategorising(true);
 
     try {
@@ -224,25 +298,34 @@ export default function TransactionsPage() {
 
       const newTransaction: Transaction = {
         description,
+
         amount: Number(amount),
+
         category: selectedCategory,
+
         date: transactionDate,
+
         type: transactionType,
+
         source: "manual",
       };
 
       const newTransactionId = await addTransactionToFirestore(
         user.uid,
-        newTransaction
+
+        newTransaction,
       );
 
       setTransactions((currentTransactions) => [
         { ...newTransaction, id: newTransactionId },
+
         ...currentTransactions,
       ]);
 
       resetForm();
+
       setCurrentPage(1);
+
       setShowPopup(false);
     } finally {
       setIsCategorising(false);
@@ -251,7 +334,9 @@ export default function TransactionsPage() {
 
   const handleEditClick = () => {
     setEditMode(!editMode);
+
     setDeleteMode(false);
+
     setSelectedTransactions([]);
   };
 
@@ -261,11 +346,17 @@ export default function TransactionsPage() {
     const transaction = transactions[actualIndex];
 
     setEditingIndex(actualIndex);
+
     setDescription(transaction.description);
+
     setAmount(String(transaction.amount));
+
     setCategory(transaction.category === "Auto" ? "" : transaction.category);
+
     setTransactionDate(transaction.date);
+
     setTransactionType(transaction.type);
+
     setShowPopup(true);
   };
 
@@ -277,11 +368,13 @@ export default function TransactionsPage() {
       transactionDate === ""
     ) {
       setErrorMessage("Please fill in all required fields.");
+
       return;
     }
 
     if (Number(amount) <= 0) {
       setErrorMessage("Amount must be greater than 0.");
+
       return;
     }
 
@@ -305,30 +398,40 @@ export default function TransactionsPage() {
 
       const updatedTransaction: Transaction = {
         id: transactionToEdit.id,
+
         description,
+
         amount: Number(amount),
+
         category: selectedCategory,
+
         date: transactionDate,
+
         type: transactionType,
+
         source: transactionToEdit.source,
       };
 
       await updateTransactionInFirestore(
         user.uid,
+
         transactionToEdit.id,
-        updatedTransaction
+
+        updatedTransaction,
       );
 
       setTransactions((currentTransactions) =>
         currentTransactions.map((transaction) =>
           transaction.id === transactionToEdit.id
             ? updatedTransaction
-            : transaction
-        )
+            : transaction,
+        ),
       );
 
       resetForm();
+
       setEditMode(false);
+
       setShowPopup(false);
     } finally {
       setIsCategorising(false);
@@ -337,6 +440,7 @@ export default function TransactionsPage() {
 
   const cancelPopup = () => {
     resetForm();
+
     setShowPopup(false);
   };
 
@@ -344,8 +448,8 @@ export default function TransactionsPage() {
     if (selectedTransactions.includes(actualIndex)) {
       setSelectedTransactions(
         selectedTransactions.filter(
-          (selectedIndex) => selectedIndex !== actualIndex
-        )
+          (selectedIndex) => selectedIndex !== actualIndex,
+        ),
       );
     } else {
       setSelectedTransactions([...selectedTransactions, actualIndex]);
@@ -354,24 +458,25 @@ export default function TransactionsPage() {
 
   const toggleSelectAll = () => {
     const currentPageIndexes = currentTransactions.map(
-      ({ originalIndex }) => originalIndex
+      ({ originalIndex }) => originalIndex,
     );
 
     const allCurrentSelected = currentPageIndexes.every((index) =>
-      selectedTransactions.includes(index)
+      selectedTransactions.includes(index),
     );
 
     if (allCurrentSelected) {
       setSelectedTransactions(
         selectedTransactions.filter(
-          (index) => !currentPageIndexes.includes(index)
-        )
+          (index) => !currentPageIndexes.includes(index),
+        ),
       );
     } else {
       setSelectedTransactions([
         ...selectedTransactions,
+
         ...currentPageIndexes.filter(
-          (index) => !selectedTransactions.includes(index)
+          (index) => !selectedTransactions.includes(index),
         ),
       ]);
     }
@@ -380,13 +485,17 @@ export default function TransactionsPage() {
   const handleDeleteClick = async () => {
     if (!deleteMode) {
       setDeleteMode(true);
+
       setEditMode(false);
+
       setSelectedTransactions([]);
+
       return;
     }
 
     if (selectedTransactions.length === 0) {
       setDeleteMode(false);
+
       return;
     }
 
@@ -395,6 +504,7 @@ export default function TransactionsPage() {
     }
 
     // Nothing is removed until the user confirms in the prompt below.
+
     setShowDeleteConfirm(true);
   };
 
@@ -411,7 +521,9 @@ export default function TransactionsPage() {
 
     try {
       const transactionsToDelete = selectedTransactions
+
         .map((index) => transactions[index])
+
         .filter((transaction) => transaction?.id);
 
       for (const transaction of transactionsToDelete) {
@@ -419,18 +531,21 @@ export default function TransactionsPage() {
       }
 
       const deletedIds = transactionsToDelete.map(
-        (transaction) => transaction.id
+        (transaction) => transaction.id,
       );
 
       setTransactions((currentTransactions) =>
         currentTransactions.filter(
-          (transaction) => !deletedIds.includes(transaction.id)
-        )
+          (transaction) => !deletedIds.includes(transaction.id),
+        ),
       );
 
       setSelectedTransactions([]);
+
       setDeleteMode(false);
+
       setCurrentPage(1);
+
       setShowDeleteConfirm(false);
     } finally {
       setIsDeleting(false);
@@ -446,12 +561,15 @@ export default function TransactionsPage() {
 
     try {
       await deleteTransactionsBatchFromFirestore(user.uid, duplicateIds);
+
       setTransactions((currentTransactions) =>
         currentTransactions.filter(
-          (transaction) => !duplicateIds.includes(transaction.id ?? "")
-        )
+          (transaction) => !duplicateIds.includes(transaction.id ?? ""),
+        ),
       );
+
       setShowDuplicateConfirm(false);
+
       setShowDuplicateModal(false);
     } finally {
       setIsRemovingDuplicates(false);
@@ -459,21 +577,29 @@ export default function TransactionsPage() {
   };
 
   const totalIncome = transactions
+
     .filter((transaction) => transaction.type === "Income")
+
     .reduce((total, transaction) => total + transaction.amount, 0);
 
   const totalExpenses = transactions
+
     .filter((transaction) => transaction.type === "Expense")
+
     .reduce((total, transaction) => total + transaction.amount, 0);
 
   const handleConfirmCsvImport = async (
     importedTransactions: {
       date: string;
+
       type: TransactionType;
+
       source: string;
+
       description: string;
+
       amount: number;
-    }[]
+    }[],
   ) => {
     if (!user) {
       return;
@@ -482,22 +608,29 @@ export default function TransactionsPage() {
     const convertedTransactions: Transaction[] = importedTransactions.map(
       (transaction) => ({
         description: transaction.description,
+
         amount: Math.abs(transaction.amount),
+
         category: transaction.source,
+
         date: normalizeCsvDate(transaction.date),
+
         type: transaction.type,
+
         source: "csv",
-      })
+      }),
     );
 
     await addTransactionsBatchToFirestore(
       user.uid,
-      convertedTransactions
+
+      convertedTransactions,
     );
 
     const savedTransactions = await getUserTransactions(user.uid);
 
     setTransactions(savedTransactions);
+
     setCurrentPage(1);
   };
 
@@ -506,6 +639,7 @@ export default function TransactionsPage() {
       if (!user) return;
 
       const savedTransactions = await getUserTransactions(user.uid);
+
       setTransactions(savedTransactions);
     }
 
@@ -513,12 +647,15 @@ export default function TransactionsPage() {
   }, [user]);
 
   // If filtering/deleting changes the number of pages,
+
   // prevent the user from remaining on a page that no longer exists.
+
   useEffect(() => {
     if (totalPages === 0) {
       if (currentPage !== 1) {
         setCurrentPage(1);
       }
+
       return;
     }
 
@@ -543,30 +680,28 @@ export default function TransactionsPage() {
     <main className="min-h-screen bg-background px-8 py-10 text-text xl:px-12">
       <div className="mx-auto max-w-7xl">
         {/* Page heading */}
-        <div className="mb-8">
-          <div className="mb-2 flex items-center gap-3">
-            <div className="rounded-xl bg-blue-600/15 p-3 text-blue-400">
-              <ReceiptText size={26} />
-            </div>
 
-            <div>
-              <h1 className="text-3xl font-bold">Transactions</h1>
-              <p className="mt-1 text-inactive-text">
-                Review, search, filter, add, edit, and manage your financial transactions.
-              </p>
-            </div>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Transactions</h1>
+
+          <p className="mt-1 text-inactive-text">
+            Review, search, filter, add, edit, and manage your financial
+            transactions.
+          </p>
         </div>
 
         {/* Summary */}
+
         <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-zinc-800 bg-widget p-5 shadow-lg">
             <p className="text-sm text-inactive-text">Total Transactions</p>
+
             <p className="mt-2 text-3xl font-bold">{transactions.length}</p>
           </div>
 
           <div className="rounded-2xl border border-zinc-800 bg-widget p-5 shadow-lg">
             <p className="text-sm text-inactive-text">Total Income</p>
+
             <p className="mt-2 text-3xl font-bold text-green-400">
               {formatCurrency(totalIncome)}
             </p>
@@ -574,6 +709,7 @@ export default function TransactionsPage() {
 
           <div className="rounded-2xl border border-zinc-800 bg-widget p-5 shadow-lg">
             <p className="text-sm text-inactive-text">Total Expenses</p>
+
             <p className="mt-2 text-3xl font-bold text-red-400">
               {formatCurrency(totalExpenses)}
             </p>
@@ -583,11 +719,17 @@ export default function TransactionsPage() {
         {duplicateGroups.length > 0 && (
           <section className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-800/60 bg-amber-950/20 p-5">
             <div>
-              <p className="font-bold text-amber-300">Duplicate transactions found</p>
+              <p className="font-bold text-amber-300">
+                Duplicate transactions found
+              </p>
+
               <p className="mt-1 text-sm text-amber-200/80">
-                {duplicateCount} extra transaction{duplicateCount === 1 ? "" : "s"} in {duplicateGroups.length} group{duplicateGroups.length === 1 ? "" : "s"} can be removed.
+                {duplicateCount} extra transaction
+                {duplicateCount === 1 ? "" : "s"} in {duplicateGroups.length}{" "}
+                group{duplicateGroups.length === 1 ? "" : "s"} can be removed.
               </p>
             </div>
+
             <button
               type="button"
               onClick={() => setShowDuplicateModal(true)}
@@ -599,6 +741,7 @@ export default function TransactionsPage() {
         )}
 
         {/* Search / actions */}
+
         <section className="mb-6 rounded-2xl border border-zinc-800 bg-widget p-5 shadow-lg">
           <div className="flex flex-col gap-3 lg:flex-row">
             <div className="relative min-w-0 flex-1">
@@ -607,6 +750,7 @@ export default function TransactionsPage() {
                 value={searchText}
                 onChange={(event) => {
                   setSearchText(event.target.value);
+
                   setCurrentPage(1);
                 }}
                 className="w-full rounded-xl border border-zinc-700 bg-secondary px-4 py-3 pr-11 text-text outline-none transition focus:border-blue-500"
@@ -630,6 +774,7 @@ export default function TransactionsPage() {
                 }`}
               >
                 <Pencil size={18} />
+
                 <span className="hidden sm:inline">Edit</span>
               </button>
 
@@ -644,6 +789,7 @@ export default function TransactionsPage() {
                 }`}
               >
                 <Trash2 size={18} />
+
                 <span className="hidden sm:inline">Delete</span>
               </button>
 
@@ -652,8 +798,11 @@ export default function TransactionsPage() {
                 onClick={() => {
                   if (isFilterActive) {
                     setStartDate("");
+
                     setEndDate("");
+
                     setCurrentPage(1);
+
                     return;
                   }
 
@@ -667,6 +816,7 @@ export default function TransactionsPage() {
                 }`}
               >
                 <Filter size={18} />
+
                 <span className="hidden sm:inline">
                   {isFilterActive ? "Clear Filter" : "Filter"}
                 </span>
@@ -676,7 +826,9 @@ export default function TransactionsPage() {
                 type="button"
                 onClick={() => {
                   resetForm();
+
                   setEditMode(false);
+
                   setShowPopup(true);
                 }}
                 className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
@@ -699,12 +851,14 @@ export default function TransactionsPage() {
         </section>
 
         {/* Transaction list */}
+
         <section className="rounded-2xl border border-zinc-800 bg-widget p-5 shadow-lg">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-blue-400">
                 Transaction History
               </p>
+
               <h2 className="mt-1 text-2xl font-bold">Your Transactions</h2>
             </div>
 
@@ -730,12 +884,13 @@ export default function TransactionsPage() {
                   checked={
                     currentTransactions.length > 0 &&
                     currentTransactions.every(({ originalIndex }) =>
-                      selectedTransactions.includes(originalIndex)
+                      selectedTransactions.includes(originalIndex),
                     )
                   }
                   onChange={toggleSelectAll}
                   className="h-4 w-4"
                 />
+
                 <span className="font-medium">Select All</span>
               </label>
 
@@ -755,6 +910,7 @@ export default function TransactionsPage() {
             {currentTransactions.length === 0 && (
               <div className="rounded-xl border border-zinc-800 bg-secondary p-8 text-center">
                 <p className="font-semibold">No transactions found.</p>
+
                 <p className="mt-1 text-sm text-inactive-text">
                   Try changing your search or date filter.
                 </p>
@@ -788,7 +944,9 @@ export default function TransactionsPage() {
 
                   <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-inactive-text">
                     <span>{transaction.type}</span>
+
                     <span>•</span>
+
                     <span>{transaction.date}</span>
                   </div>
                 </div>
@@ -815,6 +973,7 @@ export default function TransactionsPage() {
                   }`}
                 >
                   {transaction.type === "Income" ? "+" : "-"}
+
                   {formatCurrency(transaction.amount)}
                 </p>
               </div>
@@ -822,6 +981,7 @@ export default function TransactionsPage() {
           </div>
 
           {/* Pagination controls */}
+
           <div className="mt-6 flex flex-col gap-4 border-t border-zinc-800 pt-5 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <label
@@ -836,14 +996,19 @@ export default function TransactionsPage() {
                 value={transactionsPerPage}
                 onChange={(event) => {
                   setTransactionsPerPage(Number(event.target.value));
+
                   setCurrentPage(1);
+
                   setSelectedTransactions([]);
                 }}
                 className="rounded-lg border border-zinc-700 bg-secondary px-3 py-2 text-sm text-text outline-none transition focus:border-blue-500"
               >
                 <option value={10}>10</option>
+
                 <option value={15}>15</option>
+
                 <option value={20}>20</option>
+
                 <option value={25}>25</option>
               </select>
             </div>
@@ -862,7 +1027,8 @@ export default function TransactionsPage() {
 
                   {Array.from(
                     { length: totalPages },
-                    (_, index) => index + 1
+
+                    (_, index) => index + 1,
                   ).map((pageNumber) => (
                     <button
                       type="button"
@@ -915,9 +1081,14 @@ export default function TransactionsPage() {
               <p className="text-sm font-semibold uppercase tracking-wide text-amber-400">
                 Review
               </p>
-              <h2 className="mt-1 pr-10 text-2xl font-bold">Duplicate transactions</h2>
+
+              <h2 className="mt-1 pr-10 text-2xl font-bold">
+                Duplicate transactions
+              </h2>
+
               <p className="mt-2 text-sm text-inactive-text">
-                One copy from each group will remain. The other {duplicateCount} transaction{duplicateCount === 1 ? "" : "s"} will be removed.
+                One copy from each group will remain. The other {duplicateCount}{" "}
+                transaction{duplicateCount === 1 ? "" : "s"} will be removed.
               </p>
 
               <div className="mt-5 space-y-3">
@@ -926,12 +1097,19 @@ export default function TransactionsPage() {
                     key={group.duplicateIds.join("-")}
                     className="rounded-xl border border-zinc-800 bg-secondary p-4"
                   >
-                    <p className="font-semibold">{group.transaction.description}</p>
-                    <p className="mt-1 text-sm text-inactive-text">
-                      {group.transaction.date} · {group.transaction.type} · {group.transaction.category} · {formatCurrency(group.transaction.amount)}
+                    <p className="font-semibold">
+                      {group.transaction.description}
                     </p>
+
+                    <p className="mt-1 text-sm text-inactive-text">
+                      {group.transaction.date} · {group.transaction.type} ·{" "}
+                      {group.transaction.category} ·{" "}
+                      {formatCurrency(group.transaction.amount)}
+                    </p>
+
                     <p className="mt-2 text-sm text-inactive-text">
-                      {group.count} identical copies found; {group.duplicateIds.length} will be removed.
+                      {group.count} identical copies found;{" "}
+                      {group.duplicateIds.length} will be removed.
                     </p>
                   </div>
                 ))}
@@ -945,6 +1123,7 @@ export default function TransactionsPage() {
                 >
                   Cancel
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setShowDuplicateConfirm(true)}
@@ -963,10 +1142,17 @@ export default function TransactionsPage() {
               <p className="text-sm font-semibold uppercase tracking-wide text-red-400">
                 Confirmation
               </p>
-              <h2 className="mt-1 text-2xl font-bold">Remove duplicate transactions?</h2>
+
+              <h2 className="mt-1 text-2xl font-bold">
+                Remove duplicate transactions?
+              </h2>
+
               <p className="mt-3 text-sm leading-6 text-inactive-text">
-                {duplicateCount} duplicate transaction{duplicateCount === 1 ? "" : "s"} will be permanently removed. One copy from each group will remain.
+                {duplicateCount} duplicate transaction
+                {duplicateCount === 1 ? "" : "s"} will be permanently removed.
+                One copy from each group will remain.
               </p>
+
               <div className="mt-6 flex gap-3">
                 <button
                   type="button"
@@ -976,6 +1162,7 @@ export default function TransactionsPage() {
                 >
                   Cancel
                 </button>
+
                 <button
                   type="button"
                   onClick={confirmDuplicateCleanup}
@@ -990,6 +1177,7 @@ export default function TransactionsPage() {
         )}
 
         {/* Filter popup */}
+
         {showFilterPopup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
             <div className="relative w-full max-w-[460px] rounded-2xl border border-zinc-800 bg-widget p-6 text-text shadow-2xl">
@@ -1005,9 +1193,12 @@ export default function TransactionsPage() {
               <p className="text-sm font-semibold uppercase tracking-wide text-blue-400">
                 Filter
               </p>
+
               <h2 className="mt-1 text-2xl font-bold">Filter by Date</h2>
+
               <p className="mt-2 text-sm text-inactive-text">
-                Choose a custom date range or use one of the quick options below.
+                Choose a custom date range or use one of the quick options
+                below.
               </p>
 
               <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1021,6 +1212,7 @@ export default function TransactionsPage() {
                     value={startDate}
                     onChange={(event) => {
                       setStartDate(event.target.value);
+
                       setCurrentPage(1);
                     }}
                     className="w-full rounded-xl border border-zinc-700 bg-secondary p-3 text-text outline-none transition focus:border-blue-500"
@@ -1037,6 +1229,7 @@ export default function TransactionsPage() {
                     value={endDate}
                     onChange={(event) => {
                       setEndDate(event.target.value);
+
                       setCurrentPage(1);
                     }}
                     className="w-full rounded-xl border border-zinc-700 bg-secondary p-3 text-text outline-none transition focus:border-blue-500"
@@ -1074,6 +1267,7 @@ export default function TransactionsPage() {
                 type="button"
                 onClick={() => {
                   setCurrentPage(1);
+
                   setShowFilterPopup(false);
                 }}
                 className="mt-6 w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700"
@@ -1085,6 +1279,7 @@ export default function TransactionsPage() {
         )}
 
         {/* Delete confirmation */}
+
         {showDeleteConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
             <div className="w-full max-w-[460px] rounded-2xl border border-zinc-800 bg-widget p-6 text-text shadow-2xl">
@@ -1093,7 +1288,8 @@ export default function TransactionsPage() {
               </p>
 
               <h2 className="mt-1 text-2xl font-bold">
-                Delete transaction{selectedTransactions.length === 1 ? "" : "s"}?
+                Delete transaction{selectedTransactions.length === 1 ? "" : "s"}
+                ?
               </h2>
 
               <p className="mt-3 text-sm leading-6 text-inactive-text">
@@ -1127,6 +1323,7 @@ export default function TransactionsPage() {
         )}
 
         {/* Add/Edit popup */}
+
         {showPopup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
             <div className="relative max-h-[90vh] w-full max-w-[500px] overflow-y-auto rounded-2xl border border-zinc-800 bg-widget p-6 text-text shadow-2xl">
@@ -1161,6 +1358,7 @@ export default function TransactionsPage() {
                       key={type}
                       onClick={() => {
                         setTransactionType(type);
+
                         setCategory("");
                       }}
                       className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
@@ -1171,7 +1369,7 @@ export default function TransactionsPage() {
                     >
                       {type}
                     </button>
-                  )
+                  ),
                 )}
               </div>
 
@@ -1201,7 +1399,9 @@ export default function TransactionsPage() {
               </div>
 
               <div className="mt-4">
-                <label className="mb-2 block text-sm font-medium">Category</label>
+                <label className="mb-2 block text-sm font-medium">
+                  Category
+                </label>
 
                 <select
                   value={category}

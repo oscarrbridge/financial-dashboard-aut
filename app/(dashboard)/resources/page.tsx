@@ -490,19 +490,11 @@ export default function ResourcesPage() {
       <div className="mx-auto max-w-7xl">
         {/* Page heading */}
         <div className="mb-8">
-          <div className="mb-2 flex items-center gap-3">
-            <div className="rounded-xl bg-blue-600/15 p-3 text-blue-400">
-              <BookOpen size={26} />
-            </div>
-
-            <div>
-              <h1 className="text-3xl font-bold">Resources</h1>
-              <p className="mt-1 text-inactive-text">
-                Explore practical financial information, helpful links, quick checks,
-                and a financial glossary.
-              </p>
-            </div>
-          </div>
+          <h1 className="text-3xl font-bold">Resources</h1>
+          <p className="mt-1 text-inactive-text">
+            Explore practical financial information, helpful links, quick checks,
+            and a financial glossary.
+          </p>
         </div>
 
         {/* Search */}
