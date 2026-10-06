@@ -1,0 +1,41 @@
+Date,Unique Id,Tran Type,Payee,Memo,Amount
+2026/01/03,2026010301,EFTPOS,Countdown,"Groceries",-68.45
+2026/01/04,2026010401,EFTPOS,Auckland Transport,"AT HOP top up",-25.00
+2026/01/05,2026010501,TFR IN,Part Time Wages,"Weekly wages",342.80
+2026/01/06,2026010601,EFTPOS,Cityfitness,"Gym membership",-17.99
+2026/01/07,2026010701,EFTPOS,Warehouse Stationery,"Notebook and pens",-14.60
+2026/01/08,2026010801,TFR IN,Student Allowance,"Weekly student allowance",285.40
+2026/01/09,2026010901,EFTPOS,New World,"Groceries",-82.35
+2026/01/10,2026011001,TFR IN,Part Time Wages,"Weekly wages",368.20
+2026/01/11,2026011101,EFTPOS,Netflix,"Monthly subscription",-22.99
+2026/01/12,2026011201,TFR OUT,ANZ Personal Loan,"Loan repayment",-150.00
+2026/01/13,2026011301,EFTPOS,McDonalds,"Dinner",-16.50
+2026/01/14,2026011401,TFR IN,Part Time Wages,"Weekly wages",351.60
+2026/01/15,2026011501,TFR OUT,Westpac Credit Card,"Credit card repayment",-85.00
+2026/01/16,2026011601,EFTPOS,Countdown,"Groceries",-54.90
+2026/01/17,2026011701,TFR IN,Student Allowance,"Weekly student allowance",285.40
+2026/01/18,2026011801,EFTPOS,Uber,"Trip to university",-24.80
+2026/01/19,2026011901,TFR OUT,ANZ Personal Loan,"Loan repayment",-150.00
+2026/01/20,2026012001,EFTPOS,The Warehouse,"Household items",-31.75
+2026/01/21,2026012101,TFR IN,Part Time Wages,"Weekly wages",379.45
+2026/01/22,2026012201,EFTPOS,Starbucks,"Coffee",-7.50
+2026/01/23,2026012301,TFR OUT,Westpac Credit Card,"Credit card repayment",-65.00
+2026/01/24,2026012401,EFTPOS,Countdown,"Groceries",-73.80
+2026/01/25,2026012501,TFR IN,Student Allowance,"Weekly student allowance",285.40
+2026/01/26,2026012601,EFTPOS,UniLodge,"Accommodation",-185.00
+2026/01/27,2026012701,TFR OUT,Student Loan,"Student loan repayment",-100.00
+2026/01/28,2026012801,EFTPOS,PB Tech,"USB cable",-19.90
+2026/01/29,2026012901,TFR IN,Part Time Wages,"Weekly wages",361.25
+2026/01/30,2026013001,EFTPOS,Caltex,"Petrol",-68.50
+2026/01/31,2026013101,TFR OUT,ANZ Personal Loan,"Loan repayment",-150.00
+2026/02/01,2026020101,EFTPOS,Dominos,"Dinner",-21.95
+2026/02/02,2026020201,TFR IN,Part Time Wages,"Weekly wages",355.70
+2026/02/03,2026020301,TFR OUT,Westpac Credit Card,"Credit card repayment",-75.00
+2026/02/04,2026020401,EFTPOS,Chemist Warehouse,"Toiletries",-27.45
+2026/02/05,2026020501,TFR OUT,Student Loan,"Student loan repayment",-100.00
+2026/02/06,2026020601,EFTPOS,Hoyts,"Movie tickets",-26.00
+2026/02/07,2026020701,TFR OUT,ANZ Personal Loan,"Loan repayment",-150.00
+2026/02/08,2026020801,EFTPOS,New World,"Groceries",-96.30
+2026/02/09,2026020901,TFR IN,Tax Refund,"IRD tax refund",124.85
+2026/02/10,2026021001,EFTPOS,Auckland Transport,"AT HOP top up",-30.00
+2026/02/11,2026021101,TFR OUT,Westpac Credit Card,"Credit card repayment",-90.00
