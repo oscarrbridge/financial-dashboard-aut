@@ -9,6 +9,17 @@
 
 ## Features
 
+### Dashboard
+
+- Displays a personalised welcome message for the signed-in user.
+- Lets users view financial data over the last 7, 30, or 365 days.
+- Shows summary cards for balance, income, expenses, debt, and surplus.
+- Provides financial insights, including the top spending category and savings trends.
+- Compares planned budget spending with actual spending by category.
+- Displays cash flow between income, expenses, and surplus.
+- Shows expenses over time, spending and income breakdowns, and income compared with expenses.
+- Updates automatically when transactions or budgets change.
+
 ### User Authentication
 - Users can create an account using either Google Sign-In or by manually entering their registration details.
 - Users can log in using Google authentication or their registered email and password credentials.
